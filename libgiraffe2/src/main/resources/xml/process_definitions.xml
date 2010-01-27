@@ -72,14 +72,15 @@ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" >
                 </datasource>
                 <conversionHint field="hit_timestamp">
                     <name>string2date</name>
-                    <parameters format="HH:MM" />
+                    <parameters format="d/M/y:H:m:s Z" />
+                    <!--04/Nov/2009:02:01:13 +0100-->
                 </conversionHint>
             </input>
             <!-- Use default formats for output files. -->
             <output name="fact">
                 <conversionHint field="hit_timestamp">
                     <name>date2string</name>
-                    <parameters format="HH:MM" />
+                    <parameters format="d/M/y:H:m:s Z" />
                 </conversionHint>
                 <errorRoute>
                     <destination>conversion_errors</destination>
@@ -191,9 +192,9 @@ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" >
             </dp:route>
             <!-- no destination discards -->
             <dp:route>
-                <dp:source>@all - (@sinks + @sources)</dp:source>
+                <dp:source>@all - no_destination_discard</dp:source>
                 <dp:destination>no_destination_discard</dp:destination>
-                <dp:mapExpression expression="received = java.lang.Object[] {receivedRecord.getFields()}, created = java.lang.Object[] {createdRecord.getFields()}"/>
+                <dp:mapExpression expression="received = java.lang.Object[] {(null!=receivedRecord)?receivedRecord.getFields():null}, created = java.lang.Object[] {(null!=createdRecord)?createdRecord.getFields():null}"/>
                 <dp:condition>
                     <dt:not>
                         <dt:predicate>

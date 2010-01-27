@@ -16,8 +16,6 @@
  */
 package hu.sztaki.ilab.giraffe.core.processingnetwork;
 
-import hu.sztaki.ilab.giraffe.core.processingnetwork.ProcessMonitor;
-
 /**
  *
  * @author neumark
@@ -56,5 +54,9 @@ public class ProcessMonitorBase implements ProcessMonitor {
 
     public void onProcessFinish() {
         logger.info("ETL process finished.");
+    }
+
+    public void onTerminalException(String terminalId, Throwable ex) {
+        logger.error("An error occured in terminal '"+terminalId+"' (probably a conversion error).", ex);
     }
 }

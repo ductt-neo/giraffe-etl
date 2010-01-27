@@ -125,8 +125,7 @@ public class InnerNodeSource implements ProcessingNetworkGenerator.ProcessingNod
             // call the member function of the specified class.
             StringWriter codeWriter = new StringWriter();
             codeWriter.write("    if (!" + callingCode + ") {\n");
-            codeWriter.write("    this.events.remove(hu.sztaki.ilab.giraffe.schema.dataprocessing.EventType.META_OK); // Everything is not OK anymore\n");
-            codeWriter.write("    this.events.add(hu.sztaki.ilab.giraffe.schema.dataprocessing.EventType.ERROR_TASK_FAILED); // Specifically, our task reportedly failed.\n");
+            codeWriter.write("    this.events = ProcessingElementBaseClasses.addEvent(this.events, EventType.ERROR_TASK_FAILED);\n");
             codeWriter.write("    // Copy fields regardless of task completion error.\n");
             codeWriter.write("    }\n");
             for (Pair<String, Pair<String, String>> o : output) {
@@ -157,8 +156,18 @@ public class InnerNodeSource implements ProcessingNetworkGenerator.ProcessingNod
             codeWriter.write(" extends " + this.getBaseClass());
         }
         codeWriter.write(" {\n");
+        writeClassFields(codeWriter);
+        writeClassBody(codeWriter);
+        // write function called to assemble error record
+        codeWriter.write(generateUpdateErrorRecordFunction());
+        // close class
+        codeWriter.write("}\n");
+        return codeWriter.toString();
+    }
+
+    void writeClassFields(StringWriter codeWriter) {
         // write class fields
-        codeWriter.write("  // Class fields\n");        
+        codeWriter.write("  // Class fields\n");
         codeWriter.write(generateNodeData());
         for (java.util.Map.Entry<String, ProcessingNetworkGenerator.RecordDefinition> fieldType : this.node.getRecords().entrySet()) {
             if (fieldType.getKey().equals("nodedata")) {
@@ -171,12 +180,6 @@ public class InnerNodeSource implements ProcessingNetworkGenerator.ProcessingNod
         // Objects instantiated for use by worker tasks or event predicates are also class fields
         codeWriter.write(this.eventObjects.generateFieldDeclarations());
         codeWriter.write(this.taskObjects.generateFieldDeclarations());
-        writeClassBody(codeWriter);
-        // write function called to assemble error record
-        codeWriter.write(generateUpdateErrorRecordFunction());
-        // close class
-        codeWriter.write("}\n");
-        return codeWriter.toString();
     }
 
     void writeClassBody(StringWriter codeWriter) {
@@ -250,8 +253,7 @@ public class InnerNodeSource implements ProcessingNetworkGenerator.ProcessingNod
     String generateReceiverFunction() {
         StringWriter codeWriter = new StringWriter();
         codeWriter.write("  public void receive(" + this.node.getRecords().get("received").className + " " + ProcessingNetworkGenerator.standardInstanceNames.get("received") + ") {\n");
-        codeWriter.write("    this." + ProcessingNetworkGenerator.standardInstanceNames.get("received") + " = " + ProcessingNetworkGenerator.standardInstanceNames.get("received") + ";\n");
-        codeWriter.write("    this.events = new java.util.HashSet<hu.sztaki.ilab.giraffe.schema.dataprocessing.EventType>();\n");
+        codeWriter.write("    this." + ProcessingNetworkGenerator.standardInstanceNames.get("received") + " = " + ProcessingNetworkGenerator.standardInstanceNames.get("received") + ";\n");        
         codeWriter.write("    // Call the parent class's receive0 function.\n");
         codeWriter.write("    this.receive0();\n");
         codeWriter.write("  }\n");
@@ -296,7 +298,7 @@ public class InnerNodeSource implements ProcessingNetworkGenerator.ProcessingNod
         }
         codeWriter.write("  // pass the outgoingRecord object to the destination node.\n");
         codeWriter.write("  " + networkName + ".this." + outgoingRoute.destination.nodeName + ".receive(outgoingRecord);\n");
-        codeWriter.write("  events.add(hu.sztaki.ilab.giraffe.schema.dataprocessing.EventType.ROUTING_RECORD_HAS_BEEN_DELIVERED);\n");
+        codeWriter.write("  this.events = ProcessingElementBaseClasses.addEvent(this.events, EventType.ROUTING_RECORD_HAS_BEEN_DELIVERED);\n");
         codeWriter.write("  }\n");
         return codeWriter.toString();
     }
