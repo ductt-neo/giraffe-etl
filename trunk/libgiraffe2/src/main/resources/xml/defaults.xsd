@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Document   : defaults.xsd
+    Created on : September 24, 2009, 10:44 AM
+    Author     : neumark
+    Description:
+        Describes defaults.
+
+-->
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+    targetNamespace="http://info.ilab.sztaki.hu/giraffe/schema/defaults"
+    xmlns:tns="http://info.ilab.sztaki.hu/giraffe/schema/defaults"
+    xmlns:dt="http://info.ilab.sztaki.hu/giraffe/schema/datatypes"
+    xmlns:df="http://info.ilab.sztaki.hu/giraffe/schema/dataformat"
+    xmlns:dp="http://info.ilab.sztaki.hu/giraffe/schema/dataprocessing"    
+    xmlns:jxb="http://java.sun.com/xml/ns/jaxb" jxb:version="2.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.w3.org/2001/XMLSchema http://www.w3.org/2001/XMLSchema.xsd"
+    elementFormDefault="qualified">
+    <xsd:annotation>
+        <xsd:appinfo>
+            <jxb:schemaBindings>
+                <jxb:package name="hu.sztaki.ilab.giraffe.schema.defaults" />
+            </jxb:schemaBindings>
+        </xsd:appinfo>
+    </xsd:annotation>
+
+    <!-- XSD imports -->
+    <xsd:import namespace="http://info.ilab.sztaki.hu/giraffe/schema/datatypes"  schemaLocation="datatypes.xsd"/>
+    <xsd:import namespace="http://info.ilab.sztaki.hu/giraffe/schema/dataformat" schemaLocation="dataformat.xsd" />
+    <xsd:import namespace="http://info.ilab.sztaki.hu/giraffe/schema/dataprocessing" schemaLocation="dataprocessing.xsd" />    
+    
+    <xsd:complexType name="defaults">
+        <xsd:sequence>            
+        <xsd:element name="events">
+            <xsd:complexType>
+                <xsd:sequence>
+                    <xsd:element name="defaultEventCondition" type="dt:eventCondition" minOccurs="0" />
+                </xsd:sequence>
+            </xsd:complexType>
+        </xsd:element>
+        <xsd:element name="dataFormats">
+            <xsd:complexType>
+                <xsd:sequence>
+                    <xsd:element name="defaultDataSink" type="df:dataSink" />
+                </xsd:sequence>
+            </xsd:complexType>
+        </xsd:element>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:element name="defaults" type="tns:defaults" />
+</xsd:schema>

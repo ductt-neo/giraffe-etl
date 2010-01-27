@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Document   : process_definitions.xml
+    Created on : June 22, 2009, 9:06 AM
+    Author     : neumark
+    Description:
+        The contents of this XML file replaces KnownFormats.java
+-->
+<definitions
+xmlns="http://info.ilab.sztaki.hu/giraffe/schema/process_definitions"
+xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+xmlns:dt="http://info.ilab.sztaki.hu/giraffe/schema/datatypes"
+xmlns:df="http://info.ilab.sztaki.hu/giraffe/schema/dataformat"
+xmlns:dp="http://info.ilab.sztaki.hu/giraffe/schema/dataprocessing"
+xmlns:conv="http://info.ilab.sztaki.hu/giraffe/schema/conversion"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" >
+   
+    <process name="test">
+        <terminals>
+            <!-- The input of this process will be file(s).  -->
+            <input name="logfile">
+                <datasource>
+                    <df:format>
+                        <df:streamFormat>
+                            <df:encoding>utf-8</df:encoding>
+                            <df:newline>&#xA;</df:newline>
+                            <df:separator> </df:separator>
+                            <df:escape>\</df:escape>
+                            <df:fields>
+                                <df:column name="webserver" />
+                                <df:column name="client_ip" />
+                                <df:column name="unused0" /> <!-- apache user, always "-" -->
+                                <df:column name="unused1"/> <!-- apache log, always "-" -->
+                                <df:column name="hit_timestamp" />
+                                <df:column name="http_request" />
+                                <df:column name="http_status" />
+                                <df:column name="bytes_sent" />
+                                <df:column name="referrer_url" />
+                                <df:column name="user_agent" />
+                                <df:column name="cookies" />
+                            </df:fields>
+                            <df:columnFormatting>
+                                <df:column columnRef="hit_timestamp">
+                                    <df:quotes>
+                                        <df:start>[</df:start>
+                                        <df:end>]</df:end>
+                                    </df:quotes>
+                                </df:column>
+                                <df:column columnRef="http_request">
+                                    <df:quotes>
+                                        <df:quotes>&quot;</df:quotes>
+                                    </df:quotes>
+                                </df:column>
+                                <df:column columnRef="referrer_url">
+                                    <df:quotes>
+                                        <df:quotes>&quot;</df:quotes>
+                                    </df:quotes>
+                                </df:column>
+                                <df:column columnRef="user_agent">
+                                    <df:quotes>
+                                        <df:quotes>&quot;</df:quotes>
+                                    </df:quotes>
+                                </df:column>
+                                <df:column columnRef="cookies">
+                                    <df:quotes>
+                                        <df:quotes>&quot;</df:quotes>
+                                    </df:quotes>
+                                </df:column>
+                            </df:columnFormatting>
+                        </df:streamFormat>
+                    </df:format>
+                </datasource>
+                <conversionHint field="hit_timestamp">
+                    <name>string2date</name>
+                    <parameters format="HH:MM" />
+                </conversionHint>
+            </input>
+            <!-- Use default formats for output files. -->
+            <output name="fact">
+                <conversionHint field="hit_timestamp">
+                    <name>date2string</name>
+                    <parameters format="HH:MM" />
+                </conversionHint>
+                <errorRoute>
+                    <destination>conversion_errors</destination>
+                    <dp:mapExpression expression="* - ex = error:"/>
+                </errorRoute>
+            </output>
+            <output name="error_discard" />
+            <output name="no_destination_discard" />
+            <!--<output name="conversion_errors" />-->
+        </terminals>
+        <network>
+            <dp:io>
+                <dp:inputRef>logfile</dp:inputRef>
+                <dp:outputRef>fact</dp:outputRef>
+                <dp:outputRef>error_discard</dp:outputRef>
+                <dp:outputRef>no_destination_discard</dp:outputRef>
+            </dp:io>
+            <dp:node name="block0" monitorFrequency="5">
+                <dp:receivedFields>
+                    <df:column name="webserver" javaType="java.lang.String" />
+                    <df:column name="client_ip" javaType="java.lang.String" />
+                    <df:column name="hit_timestamp" javaType="java.util.Date" />
+                    <df:column name="http_request" javaType="java.lang.String" />
+                    <df:column name="http_status" javaType="java.lang.Integer" />
+                    <df:column name="bytes_sent" javaType="java.lang.Integer" />
+                    <df:column name="referrer_url" javaType="java.lang.String" />
+                    <df:column name="user_agent" javaType="java.lang.String" />
+                    <df:column name="cookies" javaType="java.lang.String" />
+                </dp:receivedFields>
+                <dp:createdFields>
+                    <df:column name="session_id" javaType="java.lang.String" />
+                    <df:column name="user_id" javaType="java.lang.String" />
+                    <df:column name="client_hostname" javaType="java.lang.String" />
+                    <df:column name="client_location" javaType="java.lang.String" />
+                </dp:createdFields>
+                <dp:tasks>
+                    <dp:call> <!-- Gets user and session ID out of HTTP cookies. -->
+                        <dt:class>hu.sztaki.ilab.giraffe.core.util.TestClasses$SomeClass</dt:class>
+                        <dt:input field="cookies" />
+                        <dt:output variable="apache_id" field="user_id" />
+                        <dt:output variable="phpsessid" field="session_id" />
+                    </dp:call>
+                    <dp:call> <!-- performs RDNS lookup on client ip address -->
+                        <dt:method>hu.sztaki.ilab.giraffe.core.util.TestClasses.fn1</dt:method>
+                        <dt:input field="client_ip"/>
+                        <dt:output variable="hostname" field="client_hostname" />
+                    </dp:call>
+                    <dp:call> <!-- performs GEOIP lookup on client ip address -->
+                        <dt:method>hu.sztaki.ilab.giraffe.core.util.TestClasses.fn2</dt:method>
+                        <dt:input variable="ip_address" field="client_ip"/>
+                        <dt:output variable="country" field="client_location" />
+                    </dp:call>
+                </dp:tasks>
+            </dp:node>
+            <dp:node name="block1">
+                <dp:receivedFields>
+                    <df:column name="server" javaType="java.lang.String" /> <!-- this field needs to be mapped to block0:webserver! -->
+                    <df:column name="client_ip" javaType="java.lang.String" />
+                    <df:column name="hit_timestamp" javaType="java.util.Date" />
+                    <df:column name="http_request" javaType="java.lang.String" />
+                    <df:column name="http_status" javaType="java.lang.Integer" />
+                    <df:column name="bytes_sent" javaType="java.lang.Integer" />
+                    <df:column name="referrer_url" javaType="java.lang.String" />
+                    <df:column name="user_agent" javaType="java.lang.String" />
+                    <df:column name="cookies" javaType="java.lang.String" />
+                    <df:column name="session_id" javaType="java.lang.String" />
+                    <df:column name="user_id" javaType="java.lang.String" />
+                    <df:column name="client_hostname" javaType="java.lang.String" />
+                    <df:column name="client_location" javaType="java.lang.String" />
+                </dp:receivedFields>
+                <dp:createdFields>
+                    <df:column name="user_language" javaType="java.lang.String" />
+                </dp:createdFields>
+                <dp:tasks>
+                    <dp:call>
+                        <dt:class>hu.sztaki.ilab.giraffe.core.util.TestClasses$AnotherClass</dt:class>
+                        <dt:input field="user_agent" />
+                        <dt:input field="client_location" />
+                        <dt:output variable="language" field="user_language" />
+                    </dp:call>
+                </dp:tasks>
+            </dp:node>
+            <dp:route>
+                <dp:source>logfile</dp:source>
+                <dp:destination>block0</dp:destination>
+            </dp:route>
+            <dp:route>
+                <dp:source>block0</dp:source>
+                <dp:destination>block1</dp:destination>
+                <dp:mapField source="received:webserver" destination="server" />
+            </dp:route>
+            <dp:route monitorFrequency="15">
+                <dp:source>block1</dp:source>
+                <dp:destination>fact</dp:destination>
+                <dp:mapExpression expression="* = received:, * = created:" />
+            </dp:route>
+            <!-- error handling routes -->
+            <dp:route>
+                <dp:source>@nodes</dp:source>
+                <dp:destination>error_discard</dp:destination>
+                <dp:mapExpression expression="* - ex = error:"/>
+                <dp:condition>
+                    <dt:not>
+                        <dt:predicate>
+                            <dp:eventType>meta:ok</dp:eventType>
+                        </dt:predicate>
+                    </dt:not>
+                </dp:condition>
+            </dp:route>
+            <!-- no destination discards -->
+            <dp:route>
+                <dp:source>@all - (@sinks + @sources)</dp:source>
+                <dp:destination>no_destination_discard</dp:destination>
+                <dp:mapExpression expression="received = java.lang.Object[] {receivedRecord.getFields()}, created = java.lang.Object[] {createdRecord.getFields()}"/>
+                <dp:condition>
+                    <dt:not>
+                        <dt:predicate>
+                            <dp:eventType>routing:record-has-been-delivered</dp:eventType>
+                        </dt:predicate>
+                    </dt:not>
+                </dp:condition>
+            </dp:route>
+        </network>
+    </process>
+</definitions>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Document   : process_definitions.xml
+    Created on : June 22, 2009, 9:06 AM
+    Author     : neumark
+    Description:
+        The contents of this XML file replaces KnownFormats.java
+-->
+<exports
+xmlns="http://info.ilab.sztaki.hu/giraffe/schema/exports"
+xmlns:dt="http://info.ilab.sztaki.hu/giraffe/schema/datatypes"
+xmlns:df="http://info.ilab.sztaki.hu/giraffe/schema/dataformat"
+xmlns:dp="http://info.ilab.sztaki.hu/giraffe/schema/dataprocessing"
+xmlns:conv="http://info.ilab.sztaki.hu/giraffe/schema/conversion"
+xmlns:defaults="http://info.ilab.sztaki.hu/giraffe/schema/defaults"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">    
+        <class>hu.sztaki.ilab.giraffe.core.conversion.DefaultConversions</class>    
+</exports>

@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Document   : processing_engines.xsd
+    Created on : September 24, 2009, 10:44 AM
+    Author     : neumark
+    Description:
+        Describes processing engines.
+
+-->
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+    targetNamespace="http://info.ilab.sztaki.hu/giraffe/schema/dataprocessing"
+    xmlns:tns="http://info.ilab.sztaki.hu/giraffe/schema/dataprocessing"
+    xmlns:dt="http://info.ilab.sztaki.hu/giraffe/schema/datatypes"
+    xmlns:df="http://info.ilab.sztaki.hu/giraffe/schema/dataformat"    
+    xmlns:jxb="http://java.sun.com/xml/ns/jaxb" jxb:version="2.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.w3.org/2001/XMLSchema http://www.w3.org/2001/XMLSchema.xsd"
+    elementFormDefault="qualified">
+    <xsd:annotation>
+        <xsd:appinfo>
+            <jxb:schemaBindings>
+                <jxb:package name="hu.sztaki.ilab.giraffe.schema.dataprocessing" />
+            </jxb:schemaBindings>
+        </xsd:appinfo>
+    </xsd:annotation>
+
+    <!-- XSD imports -->
+    <xsd:import namespace="http://info.ilab.sztaki.hu/giraffe/schema/datatypes" schemaLocation="datatypes.xsd"/>
+    <xsd:import namespace="http://info.ilab.sztaki.hu/giraffe/schema/dataformat" schemaLocation="dataformat.xsd"/>
+
+    <!--
+    //////////////////
+    Data processing steps
+    Data processessing steps are ordered into processing blocks.
+    Each block is made up of recordTransformations, dataSourceLookups, and events
+    //////////////////
+    -->
+
+    <xsd:complexType name="fieldToRecordMapping">
+        <xsd:sequence>
+            <xsd:group ref="tns:routeFieldMapping" maxOccurs="unbounded" />
+        </xsd:sequence>
+        <xsd:attribute name="recordName" type="dt:name" use="required" />
+    </xsd:complexType>
+
+    <xsd:complexType name="processingNode">
+        <xsd:sequence>
+            <xsd:element name="receivedFields" type="df:nativeRecord" />
+            <xsd:element name="createdFields" type="df:nativeRecord" />
+            <!-- the contents of work will probably change. For now, it just
+            contains a set of methods to call, and the names of input fields
+            (from receivedRecord) and output fields (from createdFields). -->
+            <xsd:element name="tasks">
+                <xsd:complexType>
+                    <xsd:choice maxOccurs="unbounded">
+                        <xsd:element name="network">
+                            <xsd:complexType>
+                                <xsd:sequence>
+                                    <xsd:choice>
+                                        <xsd:element name="processingNetworkRef" type="dt:name" />
+                                        <xsd:element name="processingNetwork" type="tns:processingNetwork"/>
+                                    </xsd:choice>
+                                    <!-- The input and output of a processing netowork is a record definition
+                                    Thus, we need to define record types containing the fields within
+                                    receivedFields, and record types which map to fields in createdFields -->
+                                    <xsd:element name="inputRecordMapping" type="tns:fieldToRecordMapping" maxOccurs="unbounded" />
+                                    <xsd:element name="outputRecordMapping" type="tns:fieldToRecordMapping" maxOccurs="unbounded" />
+                                </xsd:sequence>
+                            </xsd:complexType>
+                        </xsd:element>
+                        <xsd:element name="call" type="dt:objectInstance" />
+                    </xsd:choice>
+                </xsd:complexType>
+            </xsd:element>
+        </xsd:sequence>
+        <xsd:attribute name="name" type="dt:name" use="required" />
+        <xsd:attribute name="monitorFrequency" type="xsd:nonNegativeInteger" default="0" />
+    </xsd:complexType>
+
+     <!--
+    Error handling: what to do if something goes wrong.
+    First step: define what kind of errors can happen
+    -->
+    <xsd:simpleType name="eventType">
+        <xsd:annotation>
+            <xsd:documentation>
+                Lists all the different types of events which can occur
+                during the ETL process. In event predicate definitions, these
+                values may be used as booleans.
+            </xsd:documentation>
+        </xsd:annotation>
+        <xsd:restriction base = "dt:name">
+            <!-- this meta-event means that there were no errors -->
+            <xsd:enumeration value="meta:ok" />
+            <!-- These are error events, which may occur during processing. -->
+            <xsd:enumeration value="error:stream-parse-exception"/>
+            <!-- task-exception means an exception was thrown while the event was run -->
+            <xsd:enumeration value="error:task-exception" />
+            <!-- task-failed means task.runTask returned false -->
+            <xsd:enumeration value="error:task-failed" />
+            <!-- an exception occured while and event predicate was evaluated -->
+            <xsd:enumeration value="error:event-evaluation-exception" />
+            <!-- an IOException occured somewhere -->
+            <xsd:enumeration value="error:io-exception"/>
+            <!-- could not perform conversion between types (possibly because of an exception). -->
+            <xsd:enumeration value="error:conversion-failed"/>
+            <!-- routing:record-has-been-deliverd is true if at least
+            a single outgoing route has successfully delivered this record. -->
+            <xsd:enumeration value="routing:record-has-been-delivered"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <xsd:element name="eventType" type="tns:eventType" />
+
+    <xsd:attributeGroup name="sourceFieldsAttrType">
+        <xsd:annotation>
+            <xsd:documentation>
+            This type holds the possible source fields for the routeFieldMapping
+            type used in recordRoute elements.
+            sourceField must be the name of a single field, hence the type dt:name
+            expression must be in the SetExpression format.
+            </xsd:documentation>
+        </xsd:annotation>
+        <xsd:attribute name="sourceField" type="dt:name" />
+        <xsd:attribute name="expression" type="xsd:string" />
+    </xsd:attributeGroup>
+
+    <xsd:group name="routeFieldMapping">
+        <xsd:annotation>
+            <xsd:appinfo>
+                <!-- routeFieldMapping defines which source fields are mapped to
+                which destination field. The easier but more verbose way is
+                to name a source field and a destination fields. This is 
+                done by the mapField element. For example, to map the
+                source node's received:fieldA to the destination node's received:fieldB,
+                one could write simple <mapField source="fieldA" destination="fieldB" />
+
+                The other possibility is to define the mapping for several fields
+                in a string expression which will be parsed by javacc. These expressions
+                allow the use of java code within the mapping. Examples:
+
+                <mapExpression expression="fieldA = fieldB" /> 
+                  Maps source fieldB to destination fieldA.
+                <mapExpression expression="fieldA = created:fieldB" />
+                  Maps source createFeilds.fieldB to destination receivedFields.fieldA.
+                <mapExpression expression="fieldA = {Integer.parseInt(createdFields.fieldB)}" />
+                  Maps a java expression which is the function of created:fieldB to fieldA
+                <mapExpression expression="@all = received:" />
+                  Maps all received fields of the source node to the received fields of the destination node.
+                <mapExpression expression="@(all - fieldA) = received:" />
+                  Maps all received fields of the source node except fieldA to received fields of destination node.
+                <mapExpression expression="@(all - (fieldA + fieldB)) = received:, raw = error:raw" />
+                  Maps all fields in the source node's receivedFields record except fieldA and fieldB to
+                  these fields in the destination node's receivedFields record. Maps the destination node's
+                  receivedFields.raw to the sourceField's errorFields.raw (possibly overriding and mapping
+                  performed by the first statement in the expression).
+                <mapExpression expression="@all = received:, @all = created:" />
+                  This is the default mapping if explicit mapping is set. All fields in the
+                  source node's createdFields record are copied to the destination node's receivedFields,
+                  which is augmented with the remaining fields of the source receivedFields record.
+                <mapExpression expression="@all = error:" />
+                  Useful for error handling multiRoutes.
+                -->
+            </xsd:appinfo>
+        </xsd:annotation>
+        <xsd:choice>
+            <xsd:element name="mapField">
+                <xsd:complexType>
+                    <xsd:attribute name="source" type="dt:name" use="required" />
+                    <xsd:attribute name="destination" type="dt:name" use="required" />
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="mapExpression">
+                <xsd:complexType>
+                    <xsd:attribute name="expression" type="xsd:string" use="required" />
+                </xsd:complexType>
+            </xsd:element>
+        </xsd:choice>
+    </xsd:group>
+
+    <xsd:complexType name="recordRoute">
+        <xsd:annotation>
+            <xsd:documentation>
+                A recordRoute element connects the output of a processingBlock
+                with the input of another, or connects the terminal point of
+                the system with data sources and data sinks.
+            </xsd:documentation>
+        </xsd:annotation>
+        <xsd:sequence>
+            <!-- source has type xsd:string instead of dt:name, because
+            if the recordRoute is a multiRoute, then the source may be
+            a wildcard expression instead of the name of a single node. -->
+            <xsd:element name="source" type="xsd:string" />
+            <xsd:element name="destination" type="dt:name" />
+            <!-- if no routeFieldMapping is given, then an implicit
+            <mapExpression expression="@all = received:, @all = created:" /> is assumed. -->
+            <xsd:group ref="tns:routeFieldMapping" minOccurs="0" maxOccurs="unbounded" />
+            <xsd:element name="condition" type="dt:eventCondition" minOccurs="0" />
+        </xsd:sequence>
+        <xsd:attribute name="name" type="dt:name" use="optional" />
+        <xsd:attribute name="monitorFrequency" type="xsd:nonNegativeInteger" default="0" />
+    </xsd:complexType>
+
+    <xsd:complexType name="processingNetwork">
+        <xsd:sequence>
+            <!--
+            The io element contains data describing the inputs and outputs of
+            the network. It also describes asyncPipe objects, which are a pair
+            of datasource/datasink objects -both of which are within the network.
+            An asyncPipe is added both to the list of data sources and to the
+            list of data sinks. Records written to the an asyncPipe datasink appear
+            in the asyncPipe data source. Since each "real" data source has its
+            own thread, asyncPipes allow the processing network to work in
+            several threads.
+            -->
+            <xsd:element name="io">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:choice maxOccurs="unbounded">
+                            <xsd:element name="inputRef" type="dt:name" />
+                            <xsd:element name="outputRef" type="dt:name" />
+                            <xsd:element name="asyncPipe">
+                                <xsd:complexType>
+                                    <xsd:sequence>
+                                        <!-- the size of the queue used to hold records put into the pipe but not yet taken out. -->
+                                        <xsd:element name="queueSize" type="xsd:integer" minOccurs="0" />
+                                    </xsd:sequence>
+                                    <xsd:attribute name="name" type="dt:name" use="required" />
+                                </xsd:complexType>
+                            </xsd:element>
+                        </xsd:choice>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="node" type="tns:processingNode" maxOccurs="unbounded" />
+            <xsd:element name="route" type="tns:recordRoute" maxOccurs="unbounded" />
+        </xsd:sequence>
+    </xsd:complexType>
+</xsd:schema>

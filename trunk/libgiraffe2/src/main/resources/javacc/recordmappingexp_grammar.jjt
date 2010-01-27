@@ -1,0 +1,122 @@
+options {
+  MULTI = true;
+  LOOKAHEAD = 2;
+}
+
+PARSER_BEGIN(RecordMappingExpressionParser)
+package hu.sztaki.ilab.giraffe.core.factories.mappingexpressions;
+import java.io.*;
+
+public class RecordMappingExpressionParser {
+}
+
+PARSER_END (RecordMappingExpressionParser)
+
+SKIP : /* white space */
+{
+  " "
+| "\t"
+| "\n"
+| "\r"
+}
+
+TOKEN: /* operators */
+{
+  < EQ: "=" >
+|
+  < COMMA: "," >
+|
+  < LPAREN: "(" >
+|
+  < RPAREN: ")" >
+| 
+  < PLUS: "+" >
+|
+  < MINUS: "-" >
+|
+  < FIELDGRP: "@" >
+|
+  < ALLFIELDS: "*" >
+}
+
+TOKEN : /* numbers */
+{
+  < FIELDNAME:  (["a"-"z","A"-"Z","0"-"9", "_"])+  >
+|
+  < RECORDNAME: (["a"-"z","A"-"Z","0"-"9","_"])+ ":" >
+|
+  < QUALIFIEDFIELDNAME:  <RECORDNAME> <FIELDNAME> >
+|
+  < JAVAEXP:
+      "{"
+      ( (~["{","}"]) /* A java expression either doesn't contain {,}. */
+      )*
+      "}"
+  >
+|
+  < JAVATYPE: (["a"-"z","A"-"Z","0"-"9","_", ".","<",">","[","]"])* >
+}
+
+/* grammar rules */
+
+SimpleNode Start() : {}        // Start -> E
+{
+  E() { return jjtThis; }
+}
+
+
+void E() : 
+{ }
+{
+  Definition() ( <COMMA> Definition())*
+}
+
+void Definition() : {}
+{
+  ComplexFE() <EQ> ( (JavaExpression()) | (FieldOrRecord()) )
+}
+
+void ComplexFE() : {}
+{
+  T() ((Plus() | Minus()) ComplexFE())*
+}
+
+void T() : {Token t;}
+{
+  (<LPAREN> ComplexFE() <RPAREN>) | FieldName()
+}
+
+void Plus() :
+{}
+{
+    <PLUS> { jjtThis.value = "+"; }
+}
+
+void Minus() :
+{}
+{
+    <MINUS> { jjtThis.value = "-"; }
+}
+
+void FieldName() : {Token t;}
+{
+    t = <FIELDNAME> { jjtThis.value = t.image; }
+  |
+    t = <ALLFIELDS> { jjtThis.value = t.image; }
+}
+
+void FieldOrRecord() : {Token t;}
+{
+    t = <FIELDNAME> { jjtThis.value = "F" + t.image; }
+  |
+    t = <RECORDNAME> { jjtThis.value = "R" + t.image; }
+  |
+    t = <QUALIFIEDFIELDNAME> { jjtThis.value = "F" + t.image; }
+}
+
+void JavaExpression() : { Token type; Token exp;} // a java expression's type precedes the expression itself, eg. java.lang.String {capitolize("arun")}
+{
+    
+    type = <JAVATYPE>
+    exp = <JAVAEXP> { jjtThis.value = type.image + ":" + exp.image; }
+}

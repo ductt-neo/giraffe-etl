@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+    Document   : defaults.xml.xml
+    Created on : January 7, 2010, 2:37 PM
+    Author     : neumark
+    Description:
+        Purpose of the document follows.
+-->
+
+<defaults  
+   xmlns="http://info.ilab.sztaki.hu/giraffe/schema/defaults"
+   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+   xmlns:dt="http://info.ilab.sztaki.hu/giraffe/schema/datatypes"
+   xmlns:df="http://info.ilab.sztaki.hu/giraffe/schema/dataformat"
+   xmlns:dp="http://info.ilab.sztaki.hu/giraffe/schema/dataprocessing">
+    <events>
+        <defaultEventCondition>            
+                    <dt:predicate>
+                        <dp:eventType>meta:ok</dp:eventType>
+                    </dt:predicate>
+        </defaultEventCondition>
+    </events>
+    <dataFormats>
+      <defaultDataSink>
+        <df:format>
+         <df:streamFormat>
+           <df:encoding>UTF-8</df:encoding>
+           <df:newline>\n</df:newline>
+           <df:separator>|</df:separator>
+           <df:escape>\</df:escape>
+           <df:fields/><!-- fields are not known at this point -->
+         </df:streamFormat>
+        </df:format>
+      </defaultDataSink>
+    </dataFormats>
+</defaults>

@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Document   : logformats.xsd
+    Created on : July 8, 2009, 9:06 AM
+    Author     : neumark
+    Description:
+       This file deals the details of input/output data formats. Issues
+       such as file encoding, field enclosing quotes, newline characters, etc,
+       are considered. Data type manipulation is left to conversions.xsd.     
+-->
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+    targetNamespace="http://info.ilab.sztaki.hu/giraffe/schema/dataformat"
+    xmlns:tns="http://info.ilab.sztaki.hu/giraffe/schema/dataformat"
+    xmlns:dt="http://info.ilab.sztaki.hu/giraffe/schema/datatypes"
+    xmlns:jxb="http://java.sun.com/xml/ns/jaxb" jxb:version="2.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.w3.org/2001/XMLSchema http://www.w3.org/2001/XMLSchema.xsd"
+    elementFormDefault="qualified">
+    <xsd:annotation>
+        <xsd:appinfo>
+            <jxb:schemaBindings>
+                <jxb:package name="hu.sztaki.ilab.giraffe.schema.dataformat" />
+            </jxb:schemaBindings>
+        </xsd:appinfo>
+    </xsd:annotation>
+
+    <!-- Imported schemas -->
+    <xsd:import namespace="http://info.ilab.sztaki.hu/giraffe/schema/datatypes" schemaLocation="datatypes.xsd"/>
+
+    <!--
+    //////////////////
+    Column Definitions
+    //////////////////
+    Central to the definition of any record-based ETL tool is the notion of a
+    column. Several types of columns exist in giraffe.
+
+    Data read from a stream (like a file) or a database (typically through
+    JDBMS) is imported into a rawColumn. The semanticType field specifies what
+    kind of data is contained within the field, giving giraffe a hint as to
+    how it should be processed.
+    -->
+
+
+    <xsd:complexType name="stringColumn">
+        <xsd:sequence>
+            <xsd:element name="description" type="xsd:string" minOccurs="0" />
+        </xsd:sequence>
+        <xsd:attribute name="name" type="dt:name" use="required" />
+    </xsd:complexType>
+    
+    <xsd:complexType name="jdbcColumn">
+        <xsd:complexContent>
+            <xsd:extension base="tns:stringColumn">
+                <xsd:sequence>
+                    <xsd:element name="jdbcDataType" type="dt:jdbcDataType" minOccurs="0" />
+                </xsd:sequence>
+            </xsd:extension>
+        </xsd:complexContent>
+    </xsd:complexType>
+
+    <!--
+    After the string fields are converted into native data types, or if the
+    record was read from a JDBC data source, then the columns will also have
+    java data types. If the javaDataType of a column is not known, it
+    cannot be processed.  -->
+    <xsd:complexType name="nativeColumn">
+        <xsd:complexContent>
+            <xsd:extension base="tns:stringColumn">                
+                    <xsd:attribute name="javaType" type="dt:javaDataType" />
+            </xsd:extension>
+        </xsd:complexContent>
+    </xsd:complexType>
+
+    <!--
+    //////////
+    Record definition
+    //////////
+    A record is a series of columns, nothing more. Each column may be any one of
+    the types declared in allColumnTypes. RawColumns cannot be processed
+     -->
+    <xsd:complexType name="stringRecord">
+        <xsd:sequence>
+            <xsd:element name="column" type="tns:stringColumn" minOccurs="0" maxOccurs="unbounded" />
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:complexType name="jdbcRecord">
+        <xsd:sequence>
+            <xsd:element name="column" type="tns:jdbcColumn" minOccurs="0" maxOccurs="unbounded" />
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:complexType name="nativeRecord">
+        <xsd:sequence>
+            <xsd:element name="column" type="tns:nativeColumn" minOccurs="0" maxOccurs="unbounded" />
+        </xsd:sequence>
+    </xsd:complexType>
+    
+    <!--
+    ////////
+    Stream formats
+    ////////
+    If the incoming records are read from a stream (such as a file), then before
+    a record can be constructed corresponding to each line in the file, the
+    specifics of the stream's encoding must be taken into account. Specifically,
+    - What seperates records from each other (what is the newline character)?
+    - How are the fields separated from each other?
+    - The the fields of the record enclosed in quotes?  -->
+    <xsd:complexType name="streamFormat">
+        <xsd:sequence>
+            <xsd:element name="encoding" type="xsd:string" />
+            <xsd:element name="newline" type="xsd:string" />
+            <!-- The 'separator' sequence is what separates the fields from
+            each other. -->
+            <xsd:element name="separator" type="xsd:string" />
+            <!-- The 'escape' sequence lets the separator and newline
+            characters be read literally. -->
+            <xsd:element name="escape" type="xsd:string" />
+            <!-- 'columns' contains per-column settings. -->
+            <xsd:element name="fields" type="tns:stringRecord" />
+            <!-- a default quote may be assigned (optional) -->
+            <xsd:element name="defaultQuotes" type="tns:quotes" minOccurs="0" maxOccurs="unbounded" />
+            <xsd:element name="columnFormatting" minOccurs="0" maxOccurs="1">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="column" maxOccurs="unbounded">
+                            <xsd:complexType>
+                                <xsd:sequence>
+                                    <xsd:element name="quotes" type="tns:quotes" minOccurs="0" maxOccurs="unbounded" />
+                                    <xsd:element name="escape" type="xsd:string" minOccurs="0" maxOccurs="unbounded" />
+                                    <xsd:element name="columnDelimiter" type="xsd:string" minOccurs="0" maxOccurs="unbounded" />
+                                </xsd:sequence>
+                                <xsd:attribute name="columnRef" type="dt:name" use="required" />
+                            </xsd:complexType>
+                        </xsd:element>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+        </xsd:sequence>
+        <xsd:attribute name="name" type="xsd:string" use="optional" />
+    </xsd:complexType>
+
+    <xsd:complexType name="tableFormat">
+        <xsd:sequence>
+            <xsd:element name="columnParameters">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="fields" type="tns:jdbcRecord" />
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+        </xsd:sequence>
+        <xsd:attribute name="name" type="xsd:string" use="optional" />
+    </xsd:complexType>
+
+    <xsd:group name="allFormats">
+        <xsd:choice>
+            <xsd:element name="streamFormat" type="tns:streamFormat" />
+            <xsd:element name="tableFormat" type="tns:tableFormat" />
+            <xsd:element name="tmpFormat" />
+        </xsd:choice>
+    </xsd:group>
+
+    <xsd:complexType name="dataSource">
+        <xsd:sequence>
+            <xsd:choice>
+                <xsd:element name="format">
+                    <xsd:complexType>
+                        <xsd:group ref="tns:allFormats" />
+                    </xsd:complexType>
+                </xsd:element>
+                <xsd:element name="formatRef" type="dt:name" />
+            </xsd:choice>            
+        </xsd:sequence>
+        <xsd:attribute name="name" type="dt:name"/>
+    </xsd:complexType>
+
+    <xsd:complexType name="dataSink">
+        <xsd:sequence>
+            <xsd:choice minOccurs="0">
+                <xsd:element name="format">
+                    <xsd:complexType>
+                        <xsd:group ref="tns:allFormats" />
+                    </xsd:complexType>
+                </xsd:element>
+                <xsd:element name="formatRef" type="dt:name" />
+            </xsd:choice>            
+        </xsd:sequence>
+        <xsd:attribute name="name" type="dt:name" />
+    </xsd:complexType>
+
+    <xsd:complexType name="quotes">
+        <xsd:choice minOccurs="0">
+            <xsd:element name="quotes" type="xsd:string" />
+            <xsd:sequence>
+                <xsd:element name="start" type="xsd:string" />
+                <xsd:element name="end" type="xsd:string" />
+            </xsd:sequence>
+        </xsd:choice>
+    </xsd:complexType>
+
+</xsd:schema>

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Document   : configuration.xsd
+    Created on : September 29, 2009, 10:44 AM
+    Author     : neumark
+    Description:
+       This schema file describes the export definition format used by giraffe2.
+       In most cases, no special action must be taken to use a class contained
+       within a jar in the classpath. Conversions represent a notable exception:
+       Conversion classes and static methods are identified by the @Conversion
+       annotation, but this the classes to search for the annotation must be
+       explicitly stated.
+       An export file can be used to list classes to search for conversion
+       functions.
+
+-->
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+    targetNamespace="http://info.ilab.sztaki.hu/giraffe/schema/exports"
+    xmlns:tns="http://info.ilab.sztaki.hu/giraffe/schema/exports"
+    xmlns:jxb="http://java.sun.com/xml/ns/jaxb" jxb:version="2.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.w3.org/2001/XMLSchema http://www.w3.org/2001/XMLSchema.xsd"
+    elementFormDefault="qualified">
+    <xsd:annotation>
+        <xsd:appinfo>
+                <jxb:schemaBindings>
+                    <jxb:package name="hu.sztaki.ilab.giraffe.schema.exports" />
+                </jxb:schemaBindings>
+        </xsd:appinfo>
+    </xsd:annotation>
+
+    <!-- XSD imports -->
+    <xsd:element name="exports">
+        <xsd:annotation>
+            <xsd:documentation>
+                The exports element is the root node of the giraffe configuration files.
+                A JAR is giraffe-ready, when an XML file name giraffe_exports.xsl,
+                with an exports root node (more precisely, an XML document conforming
+                to configuration.xsd) is found in the META-INF folder of the JAR.
+                Using the Java reflection API, it is possible to determine whether a class has
+                a given annotation, or whether it conforms to a given interface. In order to
+                do this, however, one must first know the name of the class.
+                It is possible to use something like
+                reflections: http://code.google.com/p/reflections/ to do this, but explicitly
+                specifying these classes is good enough for right now.
+                In the future, if this file stays, it could be generated at
+                compile-time automatically.
+            </xsd:documentation>
+        </xsd:annotation>
+        <xsd:complexType>
+            <xsd:sequence>
+                <xsd:element name="class" type="xsd:string" minOccurs="0" maxOccurs="unbounded" />
+            </xsd:sequence>
+        </xsd:complexType>
+    </xsd:element>
+</xsd:schema>

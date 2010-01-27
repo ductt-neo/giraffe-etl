@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Document   : test_configuration.xml
+    Created on : June 29, 2009, 10:44 AM
+    Author     : neumark
+    Description:
+        This file defines the format of how ETL processes should be described.
+        The ETL process starts out with the (E)xtraction phrase. In our case, this
+        means the first step is selecting an input format definition
+        (this is described by logformats.xsd). Once this is complete, the columns
+        which need to be processed are (T)ransformed and processed.
+
+-->
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+    targetNamespace="http://info.ilab.sztaki.hu/giraffe/schema/process_definitions"
+    xmlns:tns="http://info.ilab.sztaki.hu/giraffe/schema/process_definitions"
+    xmlns:dt="http://info.ilab.sztaki.hu/giraffe/schema/datatypes"
+    xmlns:df="http://info.ilab.sztaki.hu/giraffe/schema/dataformat"
+    xmlns:dp="http://info.ilab.sztaki.hu/giraffe/schema/dataprocessing"    
+    xmlns:defaults="http://info.ilab.sztaki.hu/giraffe/schema/defaults"
+    xmlns:jxb="http://java.sun.com/xml/ns/jaxb" jxb:version="2.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.w3.org/2001/XMLSchema http://www.w3.org/2001/XMLSchema.xsd"
+    elementFormDefault="qualified">
+    <xsd:annotation>
+        <xsd:appinfo>
+            <jxb:schemaBindings>
+                <jxb:package name="hu.sztaki.ilab.giraffe.schema.process_definitions" />
+            </jxb:schemaBindings>
+        </xsd:appinfo>
+    </xsd:annotation>
+
+    <!-- XSD imports -->
+    <xsd:import namespace="http://info.ilab.sztaki.hu/giraffe/schema/datatypes" schemaLocation="datatypes.xsd" />
+    <xsd:import namespace="http://info.ilab.sztaki.hu/giraffe/schema/dataformat" schemaLocation="dataformat.xsd" />
+    <xsd:import namespace="http://info.ilab.sztaki.hu/giraffe/schema/dataprocessing" schemaLocation="dataprocessing.xsd" />    
+    <xsd:import namespace="http://info.ilab.sztaki.hu/giraffe/schema/defaults" schemaLocation="defaults.xsd" />
+
+    <!--
+    //////////////////
+    Process definitions
+    //////////////////
+    A process definition is a recipe for the entire ETL process.
+    It describes how the data should be read from the input stream or table,
+    how that data should be processed, and how it will be exported.
+    -->
+
+    <xsd:complexType name="conversionHint">
+        <xsd:sequence>
+            <!-- first we need some way of identifying the conversion function -->
+            <xsd:choice>
+                <xsd:element name="name" type="xsd:string" />
+                <xsd:element name="conversionMethod" type="xsd:string" />
+            </xsd:choice>
+            <!-- Any optional parameters if this is a conversion class: -->
+            <xsd:element name="parameters" minOccurs="0" type="dt:parameters" />
+        </xsd:sequence>
+        <xsd:attribute name="field" type="dt:name" use="required" />
+    </xsd:complexType>
+
+    <xsd:complexType name="errorRoute">
+        <xsd:annotation>
+            <xsd:documentation>
+                errorRoutes send data from a terminal to a data sink. Usually because
+                of a conversion error. Because the source is always the parent
+                terminal, only the destination must be named (which is a data sink
+                accessible from the current process). Note that the targetted
+                data sink does not have to be present in the processing network.
+            </xsd:documentation>
+        </xsd:annotation>
+        <xsd:sequence>
+            <xsd:element name="destination" type="dt:name" />
+            <xsd:group ref="dp:routeFieldMapping" minOccurs="0" maxOccurs="unbounded" />
+            <xsd:element name="condition" type="dt:eventCondition" minOccurs="0" />
+        </xsd:sequence>
+        <xsd:attribute name="name" type="dt:name" use="optional" />
+        <xsd:attribute name="monitorFrequency" type="xsd:nonNegativeInteger" default="0" />
+    </xsd:complexType>
+   
+    <xsd:complexType name="process">
+        <xsd:sequence>
+            <!-- Terminals are the entry and exit points of data. They are
+            files or RDBMS tables. -->
+            <xsd:element name="terminals">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="input" maxOccurs="unbounded">
+                            <xsd:complexType>
+                                <xsd:sequence>
+                                    <xsd:element name="datasource" type="df:dataSource" />
+                                    <xsd:element name="conversionHint" type="tns:conversionHint" minOccurs="0" maxOccurs="unbounded" />
+                                    <xsd:element name="errorRoute" type="tns:errorRoute" minOccurs="0" maxOccurs="unbounded" />
+                                </xsd:sequence>
+                                <xsd:attribute name="name" type="dt:name" use="required" />
+                            </xsd:complexType>
+                        </xsd:element>
+                        <xsd:element name="output" maxOccurs="unbounded">
+                            <xsd:complexType>
+                                <xsd:sequence>
+                                    <xsd:element name="datasink" type="df:dataSink" minOccurs="0"/>
+                                    <xsd:element name="conversionHint" type="tns:conversionHint" minOccurs="0" maxOccurs="unbounded" />
+                                    <xsd:element name="errorRoute" type="tns:errorRoute" minOccurs="0" maxOccurs="unbounded" />
+                                </xsd:sequence>
+                                <xsd:attribute name="name" type="dt:name" use="required" />
+                            </xsd:complexType>
+                        </xsd:element>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="network" type="dp:processingNetwork" />
+        </xsd:sequence>
+        <xsd:attribute name="name" type="dt:name" use="required" />
+    </xsd:complexType>
+
+    <xsd:element name="definitions">
+        <xsd:complexType>
+            <xsd:sequence>
+                <xsd:element name="process" type="tns:process" maxOccurs="unbounded" />
+            </xsd:sequence>
+        </xsd:complexType>
+    </xsd:element>
+</xsd:schema>

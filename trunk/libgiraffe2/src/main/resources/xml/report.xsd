@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Document   : meta.xsd
+    Created on : July 8, 2009, 9:06 AM
+    Author     : neumark
+    Description:
+        This file describes the schema for meta.xml files, created with each
+        ETL process. The meta.xml files have three goals:
+        1. Describe what happened during the processing stage. This requires
+           configuration data (events, transformations) as well as run-time
+           options (location of database file, nameservers, etc) to be recorded.
+        2. Collect statistics (such as run times) which help evaluate the
+           performance characteristics of the process. Some of this information
+           is optional (aggregator output), and some of it is in an unknown
+           format.
+        3. Define the format of the output files created by the process. This
+           includes processed.log as well as the lookup tables.
+-->
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+    targetNamespace="http://info.ilab.sztaki.hu/giraffe/schema/report"
+    xmlns:tns="http://info.ilab.sztaki.hu/giraffe/schema/report"
+    xmlns:dt="http://info.ilab.sztaki.hu/giraffe/schema/datatypes"
+    xmlns:df="http://info.ilab.sztaki.hu/giraffe/schema/dataformat"
+    xmlns:pd="http://info.ilab.sztaki.hu/giraffe/schema/process_definitions"
+    xmlns:jxb="http://java.sun.com/xml/ns/jaxb" jxb:version="2.0"
+    elementFormDefault="qualified">    
+    <xsd:annotation>
+        <xsd:appinfo>            
+                <jxb:schemaBindings>
+                    <jxb:package name="hu.sztaki.ilab.giraffe.schema.report" />
+                </jxb:schemaBindings>            
+            <jxb:globalBindings>
+                <jxb:javaType name="java.util.Calendar" xmlType="xsd:date"
+        parseMethod="javax.xml.bind.DatatypeConverter.parseDate"
+        printMethod="javax.xml.bind.DatatypeConverter.printDate"
+        />
+            </jxb:globalBindings>
+        </xsd:appinfo>
+    </xsd:annotation>
+
+    <!-- XSD imports -->
+    <xsd:import namespace="http://info.ilab.sztaki.hu/giraffe/schema/datatypes" schemaLocation="datatypes.xsd" />
+    <xsd:import namespace="http://info.ilab.sztaki.hu/giraffe/schema/dataformat" schemaLocation="dataformat.xsd" />
+    <xsd:import namespace="http://info.ilab.sztaki.hu/giraffe/schema/process_definitions" schemaLocation="process_definitions.xsd"/>
+
+    <xsd:complexType name="report">
+        <xsd:sequence>
+            <!-- terminals define the input/output connections of the system. -->
+            <xsd:element name="terminals">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <!-- We use the same input elements as in the process
+                        definition, except we bind them to an ioResource. -->
+                        <xsd:element name="input">
+                            <xsd:complexType>
+                                <xsd:complexContent>
+                                    <xsd:extension base="df:dataSource">
+                                        <xsd:sequence>
+                                            <xsd:element name="ioResource" type="dt:ioResource" />
+                                        </xsd:sequence>
+                                    </xsd:extension>
+                                </xsd:complexContent>
+                            </xsd:complexType>
+                        </xsd:element>
+                        <!-- We use the same output elements as in the process
+                        definition, except we bind them to an ioResource. -->
+                        <xsd:element name="output">
+                            <xsd:complexType>
+                                <xsd:complexContent>
+                                    <xsd:extension base="df:dataSink">
+                                        <xsd:sequence>
+                                            <xsd:element name="ioResource" type="dt:ioResource" />
+                                        </xsd:sequence>
+                                    </xsd:extension>
+                                </xsd:complexContent>
+                            </xsd:complexType>
+                        </xsd:element>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="process" type="pd:process" />
+            <xsd:element name="timing">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="programStart" type="xsd:date" />
+                        <xsd:element name="readLogStart" type="xsd:date" />
+                        <xsd:element name="readLogEnd" type="xsd:date" />
+                        <xsd:element name="programEnd" type="xsd:date" />
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+        </xsd:sequence>
+    </xsd:complexType>
+    
+</xsd:schema>
