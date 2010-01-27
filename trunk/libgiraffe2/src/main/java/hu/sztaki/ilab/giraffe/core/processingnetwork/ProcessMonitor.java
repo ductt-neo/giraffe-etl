@@ -31,6 +31,7 @@ public interface ProcessMonitor {
     public void onNodeEntry(String nodeId, int recordsProcessed);
     public void onRouteEntry(String routeId, int recordsProcessed);
     public void onError(hu.sztaki.ilab.giraffe.core.processingnetwork.ProcessingElementBaseClasses.Record errorRecord);
+    public void onTerminalException(String terminalId, Throwable ex);
     public void customEvent(Class source, String eventIdentifier, Object details);
     public void onProcessStart();
     public void onInputFinished();

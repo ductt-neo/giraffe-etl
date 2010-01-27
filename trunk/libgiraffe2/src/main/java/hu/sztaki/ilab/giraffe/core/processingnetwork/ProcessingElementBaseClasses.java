@@ -20,6 +20,7 @@ limitations under the License.
 package hu.sztaki.ilab.giraffe.core.processingnetwork;
 
 import hu.sztaki.ilab.giraffe.core.Globals;
+import hu.sztaki.ilab.giraffe.schema.dataprocessing.EventType;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -37,6 +38,15 @@ public class ProcessingElementBaseClasses {
             new java.util.HashSet<hu.sztaki.ilab.giraffe.schema.dataprocessing.EventType>(java.util.Arrays.asList(
             new hu.sztaki.ilab.giraffe.schema.dataprocessing.EventType[]{hu.sztaki.ilab.giraffe.schema.dataprocessing.EventType.META_OK})));
     protected static org.apache.log4j.Logger logger = org.apache.log4j.Logger.getLogger(DataSource.class);
+
+    public static java.util.Set<hu.sztaki.ilab.giraffe.schema.dataprocessing.EventType> addEvent(java.util.Set<hu.sztaki.ilab.giraffe.schema.dataprocessing.EventType>evSet , hu.sztaki.ilab.giraffe.schema.dataprocessing.EventType ev) {
+        if (evSet == defaultEvents || evSet == null) {
+            evSet = new java.util.HashSet<hu.sztaki.ilab.giraffe.schema.dataprocessing.EventType>();
+            evSet.add(ev);
+        }
+        else evSet.add(ev);
+        return evSet;
+    }
 
     // Processing networks must conform to this interface.
     public interface ProcessingNetwork /*extends Stoppable*/ {
@@ -78,6 +88,7 @@ public class ProcessingElementBaseClasses {
             try {
                 this.work();
             } catch (java.lang.Throwable ex) {
+                this.events = ProcessingElementBaseClasses.addEvent(this.events, EventType.ERROR_TASK_EXCEPTION);
                 updateErrorRecord(ex);
             } finally {
                 send();
@@ -95,7 +106,7 @@ public class ProcessingElementBaseClasses {
     // There are two main types of data sources: those which run in a separate thread, and those which do not
     // (the later covering embedded processing networks, living within a processingnode of another network).
     public abstract static class DataSource<ReceivedRecordType extends Record, CreatedRecordType extends Record> extends ProcessingNetworkNode {
-        
+
         protected int timeout = Globals.queueWaitTimeoutSeconds;
 
         // addRecord is the function called from outside the network to add a new record to this data source.
@@ -132,13 +143,13 @@ public class ProcessingElementBaseClasses {
                         // Note that no data source (not even ThreadedDataSource) has to be
                         // thread-safe, as each data source runs in its own thread, so
                         // the run() function will never run concurrently.
-                        events = new java.util.HashSet<hu.sztaki.ilab.giraffe.schema.dataprocessing.EventType>();
+                        events = defaultEvents;
                         createdRecord = importConversion(receivedRecord);
                         send();
                         this.recordsRead++;
                     }
                 } catch (Exception ex) {
-                    logger.debug("Unhandled exception occured: ", ex);
+                    logger.error("Unhandled exception occured: ", ex);
                 }
             }
             this.latch.countDown();
@@ -191,35 +202,40 @@ public class ProcessingElementBaseClasses {
         protected java.util.concurrent.BlockingQueue<CreatedRecordType> queue = new java.util.concurrent.ArrayBlockingQueue<CreatedRecordType>(hu.sztaki.ilab.giraffe.core.Globals.queueSize);
 
         public ThreadedDataSink() {
-
         }
 
         // Override this to route errorRecord to another data sink.
         protected void sendOnError(Record errorRecord) {
             String str = "";
-            for (Object o : errorRecord.getFields()) str += o.toString() + " ";
-            logger.error("ThreadedDataSink: export conversion failed! details: "+str);
+            if (errorRecord != null) {
+                for (Object o : errorRecord.getFields()) {
+                    if (o != null) {
+                        str += o.toString() + " ";
+                    }
+                }
+            }
+            logger.error("ThreadedDataSink: export conversion failed! details: " + str);
         }
 
         // To handle export conversion errors by sending them to an error sink,
         // simply override receive().
         public void receive(ReceivedRecordType rec) {
             CreatedRecordType exportedRecord = null;
-            java.util.Set<hu.sztaki.ilab.giraffe.schema.dataprocessing.EventType> event = defaultEvents;
             try {
                 exportedRecord = exportConversion(rec);
+                try {
+                    queue.put(exportedRecord);
+                } catch (InterruptedException ex) {
+                    ; /* Not really sure what to do with this. */
+                }
             } catch (Throwable ex) {
-                events = new java.util.HashSet<hu.sztaki.ilab.giraffe.schema.dataprocessing.EventType>();
-                events.add(hu.sztaki.ilab.giraffe.schema.dataprocessing.EventType.ERROR_CONVERSION_FAILED); // Our conversion failed.
-                sendOnError(updateErrorRecord(ex, rec, events));
-            }
-            try {
-                queue.put(exportedRecord);
-            } catch (InterruptedException ex) {
-                ; /* Not really sure what to do with this. */
+                java.util.Set<hu.sztaki.ilab.giraffe.schema.dataprocessing.EventType> ev = ProcessingElementBaseClasses.addEvent(null, EventType.ERROR_CONVERSION_FAILED);
+                sendOnError(updateErrorRecord(ex, rec, ev));
             }
         }
+
         public abstract CreatedRecordType exportConversion(ReceivedRecordType record) throws java.lang.Throwable;
+
         protected abstract Record updateErrorRecord(java.lang.Throwable ex, ReceivedRecordType received, java.util.Set<hu.sztaki.ilab.giraffe.schema.dataprocessing.EventType> events);
     }
 

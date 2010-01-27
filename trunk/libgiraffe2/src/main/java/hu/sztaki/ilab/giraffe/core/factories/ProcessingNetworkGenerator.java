@@ -406,7 +406,9 @@ public class ProcessingNetworkGenerator {
             return false;
         }
 
-        public boolean isVirtual() {return false;}
+        public boolean isVirtual() {
+            return false;
+        }
 
         protected void initStandardRecords() {
             this.records.put("error", ProcessingNetworkGenerator.sharedRecordDefinitions.get("error"));
@@ -494,22 +496,41 @@ public class ProcessingNetworkGenerator {
                 codeWriter.write("    super(latch);\n");
                 codeWriter.write("    " + ProcessingNetworkGenerator.this.networkName + ".this.process.inputs.get(\"" + DataSourceNode.this.getName() + "\").setQueueWriter(this);\n");
                 codeWriter.write(conversionObjectInstantiator.generateGetInstancesCode("convObjects"));
-                codeWriter.write("  }\n");                
+                codeWriter.write("  }\n");
                 // send() stub
                 // write class conversion fields (if any).
+                codeWriter.write(generateSendFunctions());
                 codeWriter.write(conversionObjectInstantiator.generateFieldDeclarations());
-                codeWriter.write("  public void send() {/*STUB*/ ;}\n");
                 codeWriter.write("  public boolean append(Object[] row) throws InterruptedException {\n" + "    " + this.node.records.get("received").className + " newRow = new " + this.node.records.get("received").className + "();\n" + "    newRow.setFields(row);\n" + "    queue.put(newRow);return true;\n" + "  }\n");
             }
 
+            void writeClassFields(StringWriter codeWriter) {
+                // write class fields
+                codeWriter.write("  // Class fields\n");
+                codeWriter.write(generateNodeData());
+                for (java.util.Map.Entry<String, ProcessingNetworkGenerator.RecordDefinition> fieldType : this.node.getRecords().entrySet()) {
+                    if (fieldType.getKey().equals("nodedata") ||
+                            fieldType.getKey().equals("created") ||
+                            fieldType.getKey().equals("received")) {
+                        continue; // nodedata is a special case.
+                    }
+                    if (fieldType.getValue() != null) {
+                        codeWriter.write("  " + fieldType.getValue().className + " " + ProcessingNetworkGenerator.standardInstanceNames.get(fieldType.getKey()) + " = null;\n");
+                    }
+                }
+                // Objects instantiated for use by worker tasks or event predicates are also class fields
+                codeWriter.write(this.eventObjects.generateFieldDeclarations());
+            }
+
             private void writeImportConversion(StringWriter codeWriter) {
-                // importConversion stub               
                 codeWriter.write("  public " + DataSourceNode.this.records.get("created").className + " importConversion(" + DataSourceNode.this.records.get("received").className + " record) { \n");
                 codeWriter.write("  try { // place conversion within a try... block so potential exceptions are caught.\n");
-                codeWriter.write("    return new "+DataSourceNode.this.records.get("created").className+"(");
+                codeWriter.write("    return new " + DataSourceNode.this.records.get("created").className + "(");
                 boolean first = true;
                 for (Pair<String, String> col : DataSourceNode.this.records.get("created").record) {
-                    if (!first) codeWriter.write(", ");
+                    if (!first) {
+                        codeWriter.write(", ");
+                    }
                     Pair<String, String> srcCol = ProcessingNetworkGenerator.getField(DataSourceNode.this.records.get("received"), col.second);
                     codeWriter.write(process.conversionManager.getConversionCode(
                             "datasource",
@@ -523,10 +544,9 @@ public class ProcessingNetworkGenerator {
                 }
                 codeWriter.write(");\n");
                 codeWriter.write("  } catch (Exception ex) {\n");
-                codeWriter.write("    this.events.remove(hu.sztaki.ilab.giraffe.schema.dataprocessing.EventType.META_OK); // Everything is not OK anymore\n");
-                codeWriter.write("    this.events.add(hu.sztaki.ilab.giraffe.schema.dataprocessing.EventType.ERROR_CONVERSION_FAILED); // Specifically, our task reportedly failed.\n");
+                codeWriter.write("    this.events = ProcessingElementBaseClasses.addEvent(this.events, EventType.ERROR_CONVERSION_FAILED);\n");
                 codeWriter.write("    updateErrorRecord(ex);\n");
-                codeWriter.write("    return null;\n");
+                codeWriter.write("    return new " + DataSourceNode.this.records.get("created").className + "();\n");
                 codeWriter.write("  }\n");
                 codeWriter.write("  }\n");
                 if (!conversionObjectInstantiator.isEmpty()) {
@@ -535,7 +555,7 @@ public class ProcessingNetworkGenerator {
             }
 
             public String instantiate() {
-                return " new " + getClassName() + "(this.process.dataSourcesThreadsLatch,"+
+                return " new " + getClassName() + "(this.process.dataSourcesThreadsLatch," +
                         "this.process.conversionInstantiators.get(\"" + this.node.nodeName + "\"))";
             }
 
@@ -585,14 +605,26 @@ public class ProcessingNetworkGenerator {
                 super(DataSinkNode.this, ProcessingNetworkGenerator.this.networkName);
             }
 
+            void writeClassFields(StringWriter codeWriter) {
+                codeWriter.write(generateNodeData());
+            }
+
+            String generateUpdateErrorRecordFunction() {
+                StringWriter codeWriter = new StringWriter();
+                codeWriter.write("  protected ProcessingElementBaseClasses.Record updateErrorRecord(java.lang.Throwable ex, " + DataSinkNode.this.records.get("received").className + " received, java.util.Set<hu.sztaki.ilab.giraffe.schema.dataprocessing.EventType> events) {\n");
+                codeWriter.write("    return new " + DataSinkNode.this.records.get("error").className + "(ex, null, received, " + ProcessingNetworkGenerator.standardInstanceNames.get("nodedata") + ", events);\n");
+                codeWriter.write("  }\n");
+                return codeWriter.toString();
+            }
 
             private void writeExportConversion(StringWriter codeWriter) {
-                // importConversion stub
                 codeWriter.write("  public " + DataSinkNode.this.records.get("created").className + " exportConversion(" + DataSinkNode.this.records.get("received").className + " record) throws Throwable { \n");
-                codeWriter.write("    return new "+DataSinkNode.this.records.get("created").className+"(");
+                codeWriter.write("    return new " + DataSinkNode.this.records.get("created").className + "(");
                 boolean first = true;
                 for (Pair<String, String> col : DataSinkNode.this.records.get("created").record) {
-                    if (!first) codeWriter.write(", ");
+                    if (!first) {
+                        codeWriter.write(", ");
+                    }
                     Pair<String, String> srcCol = ProcessingNetworkGenerator.getField(DataSinkNode.this.records.get("received"), col.second);
                     codeWriter.write(process.conversionManager.getConversionCode(
                             "datasink",
@@ -611,7 +643,7 @@ public class ProcessingNetworkGenerator {
                 }
             }
 
-              public void writeClassBody(StringWriter codeWriter) {
+            public void writeClassBody(StringWriter codeWriter) {
                 // import conversion.
                 writeExportConversion(codeWriter);
                 // constructor
@@ -625,10 +657,9 @@ public class ProcessingNetworkGenerator {
             }
 
             public String instantiate() {
-                return " new " + getClassName() + "("+
+                return " new " + getClassName() + "(" +
                         "this.process.conversionInstantiators.get(\"" + this.node.nodeName + "\"))";
             }
-
 
             @Override
             public String getBaseClass() {
@@ -702,6 +733,7 @@ public class ProcessingNetworkGenerator {
 
     public ProcessingNetworkGenerator(String networkName, hu.sztaki.ilab.giraffe.schema.defaults.Defaults defaults, hu.sztaki.ilab.giraffe.core.processingnetwork.Process process) {
         imports.add("hu.sztaki.ilab.giraffe.core.processingnetwork.ProcessingElementBaseClasses");
+        imports.add("hu.sztaki.ilab.giraffe.schema.dataprocessing.EventType");
         this.networkName = InnerNodeSource.toClassName(networkName);
         this.defaults = defaults;
         this.process = process;
@@ -1048,7 +1080,11 @@ public class ProcessingNetworkGenerator {
             currentRoute.routeDefinition = null;
         }
         int numDataSourceThreads = 0;
-        for (ProcessingNetworkNode n :this.nodes.values()) if (n.isDataSource() && !n.isVirtual()) numDataSourceThreads++;
+        for (ProcessingNetworkNode n : this.nodes.values()) {
+            if (n.isDataSource() && !n.isVirtual()) {
+                numDataSourceThreads++;
+            }
+        }
         process.dataSourcesThreadsLatch = new java.util.concurrent.CountDownLatch(numDataSourceThreads);
         return true;
     }
@@ -1133,7 +1169,7 @@ public class ProcessingNetworkGenerator {
         // instantiate threads for each datasource node.
         for (ProcessingNetworkNode n : this.nodes.values()) {
             if (n.isDataSource() && !n.isVirtual()) {
-                codeWriter.write("  this.process.threads.add(new Thread("+n.getName()+"));\n");
+                codeWriter.write("  this.process.threads.add(new Thread(" + n.getName() + "));\n");
             }
         }
         codeWriter.write("  }\n");
@@ -1142,9 +1178,11 @@ public class ProcessingNetworkGenerator {
     private void writeNetworkMethods(StringWriter codeWriter) {
         codeWriter.write("  public void start() {for (Thread th : this.process.threads) th.start();}\n");
         codeWriter.write("  public void dataSourcesRequestStop() {\n");
-        for (ProcessingNetworkNode n : nodes.values()) if (n.isDataSource() && !n.isVirtual()){
-            codeWriter.write("    "+n.getName()+".requestStop();\n");
+        for (ProcessingNetworkNode n : nodes.values()) {
+            if (n.isDataSource() && !n.isVirtual()) {
+                codeWriter.write("    " + n.getName() + ".requestStop();\n");
+            }
         }
-        codeWriter.write("  }\n");        
+        codeWriter.write("  }\n");
     }
 }
