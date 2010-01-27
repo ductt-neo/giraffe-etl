@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Document   : datatypes.xsd
+    Created on : September 23, 2009
+    Author     : neumark
+    Description:
+      Defines the data types used in the ETL process.
+-->
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+    targetNamespace="http://info.ilab.sztaki.hu/giraffe/schema/datatypes"
+    xmlns:tns="http://info.ilab.sztaki.hu/giraffe/schema/datatypes"
+    xmlns:jxb="http://java.sun.com/xml/ns/jaxb" jxb:version="2.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.w3.org/2001/XMLSchema http://www.w3.org/2001/XMLSchema.xsd"
+    elementFormDefault="qualified">
+    <xsd:annotation>
+        <xsd:appinfo>
+            <jxb:schemaBindings>
+                <jxb:package name="hu.sztaki.ilab.giraffe.schema.datatypes" />
+            </jxb:schemaBindings>
+        </xsd:appinfo>
+    </xsd:annotation>
+    
+    <xsd:simpleType name="jdbcDataType">
+        <xsd:annotation>
+            <xsd:documentation>
+                Taken from java.sql.Types.
+            </xsd:documentation>
+        </xsd:annotation>
+        <xsd:restriction base = "xsd:integer" />
+    </xsd:simpleType>
+
+
+
+    <!-- First we define the types used within this schema -->
+    <!-- From http://www.xmlschemareference.com/regularExpression.html
+    and http://www.datypic.com/books/defxmlschema/chapter10.html -->
+    <xsd:simpleType name="name">
+        <xsd:restriction base = "xsd:string">
+            <xsd:pattern value="(\p{Ll})+(:)?(\p{Ll}|\-|_|\p{N})+" />
+        </xsd:restriction>
+    </xsd:simpleType>
+
+
+    <xsd:simpleType name="javaDataType">
+        <xsd:annotation>
+            <xsd:documentation>
+                The contents of each value of a record must
+                be mapped to a java data type.
+            </xsd:documentation>
+        </xsd:annotation>
+        <xsd:restriction base="xsd:string" />
+    </xsd:simpleType>
+
+    <xsd:group name="allDataTypes">
+        <xsd:choice>
+            <xsd:element name="JDBCDataType" type="tns:jdbcDataType"/>
+            <xsd:element name="javaDataType" type="tns:javaDataType" />
+            <xsd:element name="string" />
+        </xsd:choice>
+    </xsd:group>
+
+    <xsd:complexType name="parameters">
+        <xsd:sequence>
+            <xsd:any minOccurs="0"/>
+        </xsd:sequence>
+        <xsd:anyAttribute namespace="##any" processContents="lax" />
+    </xsd:complexType>
+
+    <xsd:complexType name="objectInstance">
+        <xsd:sequence>
+            <!-- is not required if calling a static method. -->
+            <xsd:element name="class" type="xsd:string" minOccurs="0" />
+            <!-- if the class is given, then the method name may already be known to the code which
+            will use this object. -->
+            <xsd:element name="method" type="xsd:string" minOccurs="0" />            
+            <xsd:element name="input" type="tns:varToFieldMapping" minOccurs="0" maxOccurs="unbounded" />
+            <!-- If calling a static method, exactly one outputMapping element is expected, and the name attribute does not matter. -->
+            <xsd:element name="output" type="tns:varToFieldMapping" minOccurs="0" maxOccurs="unbounded" />
+            <!-- is not required. If calling a static method, parameters is ignored. -->            
+            <xsd:element name="parameters" type="tns:parameters" minOccurs="0" />
+        </xsd:sequence>
+        <xsd:attribute name="name" type="tns:name" use="optional" />
+    </xsd:complexType>
+
+    <xsd:group name="booleanExpression">
+        <xsd:annotation>
+            <xsd:documentation>
+            EventCondition encompasses all types of event triggers.
+            Predicate executes a java method to decide if an event takes place
+            And and Or combines several event conditions
+            Not is used for negation.
+            </xsd:documentation>
+        </xsd:annotation>
+        <xsd:choice>
+            <xsd:element name="predicate">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:any namespace="##any" processContents="strict" />
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="or">
+                <xsd:complexType>
+                    <xsd:group ref="tns:booleanExpression" maxOccurs="unbounded" />
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="xor">
+                <xsd:complexType>
+                    <xsd:group ref="tns:booleanExpression" maxOccurs="unbounded" />
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="and">
+                <xsd:complexType>
+                    <xsd:group ref="tns:booleanExpression" maxOccurs="unbounded" />
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="not" >
+                <xsd:complexType>
+                    <xsd:group ref="tns:booleanExpression"/>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="true" >
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="dummy" type="xsd:string" minOccurs="0" maxOccurs="0" />
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+        </xsd:choice>
+    </xsd:group>
+
+    <xsd:complexType name="varToFieldMapping">
+        <xsd:attribute name="variable" type="tns:name" />
+        <xsd:attribute name="field" type="tns:name" use="required" />
+    </xsd:complexType>
+
+
+    <xsd:complexType name="ioResource">
+        <xsd:choice>
+            <xsd:element name="file">
+                <xsd:complexType>
+                    <xsd:attribute name="location" type="xsd:string" use="required" />
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="db">
+                <xsd:complexType>
+                    <xsd:attribute name="connection" type="xsd:string" use="required" />
+                    <xsd:attribute name="table" type="xsd:string" use="required" />
+                </xsd:complexType>
+            </xsd:element>
+        </xsd:choice>
+        <xsd:attribute name="name" type="tns:name" use="required" />
+    </xsd:complexType>
+
+    <xsd:complexType name="eventCondition">
+        <xsd:sequence>
+            <xsd:group ref="tns:booleanExpression" />
+        </xsd:sequence>        
+    </xsd:complexType>
+</xsd:schema>

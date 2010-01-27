@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+    Document   : UserAgentConfiguration.xml
+    Created on : August 28, 2008, 3:27 PM
+    Author     : neumark
+    Description:
+        This file describes the action to be taken when a certain string is spotted in the useragent name.
+        It is a simple rewrite of the previous UserAgentConfig.java class, not necessarily the best solution.
+-->
+
+<userAgentConfig>
+    <setBrowserName pattern="Flock"><type>STANDARD_BROWSER</type></setBrowserName>    
+    <setBrowserName pattern="Shiira"><type>STANDARD_BROWSER</type></setBrowserName>    
+    <setBrowserName pattern="Opera"><type>STANDARD_BROWSER</type><engine>Presto</engine></setBrowserName>    
+    <setBrowserName pattern="IBrowse"><type>STANDARD_BROWSER</type></setBrowserName>    
+    <setBrowserName pattern="Chrome"><type>STANDARD_BROWSER</type></setBrowserName>
+    <ignore pattern="Mnenhy" />
+    <ignore pattern="pango-text" />    
+    <setBrowserName pattern="IBrowse"><type>STANDARD_BROWSER</type></setBrowserName>
+    <setBrowserName pattern="libwww-perl"><type>UNKNOWN</type><lowpriority /></setBrowserName>
+    <setBrowserName pattern="SeaMonkey"><type>STANDARD_BROWSER</type><lowpriority /></setBrowserName>
+    <setBrowserName pattern="libwww"><type>ROBOT</type><lowpriority /></setBrowserName>
+    <setBrowserName pattern="libwww-perl"><type>ROBOT</type><lowpriority /></setBrowserName>
+    <setBrowserName pattern="OpenSSL"><type>UNKNOWN</type><lowpriority /></setBrowserName>   
+    <setBrowserName pattern="iCab"><type>STANDARD_BROWSER</type></setBrowserName>
+    <setBrowserName pattern="Konqueror"><type>STANDARD_BROWSER</type><engine>KHTML</engine></setBrowserName>
+    <setBrowserName pattern="MSIE"><type>STANDARD_BROWSER</type><engine>Trident</engine></setBrowserName>
+    <setBrowserName pattern="Googlebot"><type>ROBOT</type></setBrowserName>
+    <setBrowserName pattern="LinksManager.com_bot"><type>ROBOT</type></setBrowserName>
+    <setBrowserName pattern="Yahoo! Slurp"><type>ROBOT</type></setBrowserName>
+    <setBrowserName pattern="Twiceler-0.9"><type>ROBOT</type></setBrowserName>
+    <setBrowserName pattern="BlitzBot"><type>ROBOT</type></setBrowserName>
+    <setBrowserName pattern="W3C_Validator"><type>ROBOT</type></setBrowserName>   
+    <identifyLinux pattern="Debian" />
+    <identifyLinux pattern="SUSE" />
+    <identifyLinux pattern="Red Hat" />
+    <identifyLinux pattern="Fedora" />
+    <identifyLinux pattern="Mandriva" />
+    <identifyLinux pattern="Ubuntu" />
+    <identifyLinux pattern="Kubuntu" />
+    <identifyLinux pattern="CentOS" />  
+    <setLayoutEngine pattern="KHTML"></setLayoutEngine>
+    <setLayoutEngine pattern="Gecko"></setLayoutEngine>
+    <setLayoutEngine pattern="AppleWebKit">Safari</setLayoutEngine>    
+    <identifyWindows pattern="Windows NT 6.0">Vista</identifyWindows>
+    <identifyWindows pattern="Windows NT 5.2">Server 2003; XP x64 Edition</identifyWindows>    
+    <identifyWindows pattern="Windows NT 5.1">XP</identifyWindows>
+    <identifyWindows pattern="Windows NT 5.01">2000, Service Pack 1 (SP1)</identifyWindows>
+    <identifyWindows pattern="Windows NT 5.0">2000</identifyWindows>
+    <identifyWindows pattern="Windows 2000">2000</identifyWindows>
+    <identifyWindows pattern="Windows NT 4.0">NT 4.0</identifyWindows>
+    <identifyWindows pattern="Win 9x 4.90">Me</identifyWindows>
+    <identifyWindows pattern="Windows 98">98</identifyWindows>
+    <identifyWindows pattern="Windows 95">95</identifyWindows>
+    <identifyWindows pattern="Windows CE">CE</identifyWindows>
+    <identifyWindows pattern="Win3.11">3.11</identifyWindows>
+    <identifyWindows pattern="Windows 3.1">3.1</identifyWindows>
+    <identifyWindows pattern="WinNT3.51">NT 3.11</identifyWindows>
+    <identifyWindows pattern="WinNT4.0">NT 4.0</identifyWindows>
+    <identifyWindows pattern="WinNT">NT</identifyWindows>
+    <identifyWindows pattern="Windows-NT">NT</identifyWindows>
+    <identifyWindows pattern="Win95">95</identifyWindows>
+    <identifyWindows pattern="Win98">98</identifyWindows>        
+    <identifyPlatform pattern="Windows"><platform>WINDOWS</platform></identifyPlatform>
+    <identifyPlatform pattern="Win32"><platform>WINDOWS</platform></identifyPlatform>
+    <identifyPlatform pattern="X11"><platform>UNIX</platform></identifyPlatform>   
+    <identifyPlatform pattern="Macintosh"><platform>MACINTOSH</platform></identifyPlatform>
+    <identifyPlatform pattern="Mac OS X"><name>"Mac OS"</name><version>X</version><platform>MACINTOSH</platform></identifyPlatform>
+    <identifyPlatform pattern="PPC Mac OS"><name>"Mac OS"</name><platform>MACINTOSH</platform><processor>PPC</processor></identifyPlatform>
+    <identifyPlatform pattern="PPC Mac OS X"><name>"Mac OS"</name><version>X</version><platform>MACINTOSH</platform><processor>PPC</processor></identifyPlatform>
+    <identifyPlatform pattern="PPC Mac OS X Mach-O"><name>"Mac OS"</name><version>X</version><platform>MACINTOSH</platform><processor>PPC</processor></identifyPlatform>
+    <identifyPlatform pattern="Intel Mac OS"><name>"Mac OS"</name><platform>MACINTOSH</platform><processor>MACTEL</processor></identifyPlatform>
+    <identifyPlatform pattern="Intel Mac OS X"><name>"Mac OS"</name><version>X</version><platform>MACINTOSH</platform><processor>MACTEL</processor></identifyPlatform>
+    <identifyPlatform pattern="Intel Mac OS X Mach-O"><name>"Mac OS"</name><version>X</version><platform>MACINTOSH</platform><processor>MACTEL</processor></identifyPlatform>    
+    <identifyPlatform pattern="OS/2"><platform>OS2</platform></identifyPlatform>
+    <identifyPlatform pattern="BeOS"><platform>BEOS</platform></identifyPlatform>
+    <identifyPlatform pattern="SunOS"><platform>UNIX</platform></identifyPlatform>
+    <identifyPlatform pattern="AmigaOS"><platform>AMIGA</platform></identifyPlatform>
+    <identifyPlatform pattern="Linux"><platform>UNIX</platform></identifyPlatform>
+    <identifyPlatform pattern="FreeBSD"><platform>UNIX</platform></identifyPlatform>
+    <identifyPlatform pattern="OpenBSD"><platform>UNIX</platform></identifyPlatform>
+    <identifyPlatform pattern="NetBSD"><platform>UNIX</platform></identifyPlatform>
+    <identifyPlatform pattern="IRIX64"><name>Irix</name><platform>UNIX</platform></identifyPlatform>
+    <identifyPlatform pattern="IRIX"><name>Irix</name><platform>UNIX</platform></identifyPlatform>   
+    <identifyProcessor pattern="IA64">IA_64</identifyProcessor>    
+    <identifyProcessor pattern="x64">AMD_64</identifyProcessor>    
+    <identifyProcessor pattern="WOW64">WIN32_ON_64</identifyProcessor>    
+    <identifyProcessor pattern="Mac_PowerPC">PPC</identifyProcessor>    
+    <identifyProcessor pattern="PPC">PPC</identifyProcessor>    
+    <identifyProcessor pattern="ppc">PPC</identifyProcessor>    
+    <identifyProcessor pattern="i686">I686</identifyProcessor>
+    <identifyProcessor pattern="MC680x0">M68K</identifyProcessor>
+    <identifyProcessor pattern="x86_64">AMD_64</identifyProcessor>    
+    <identifyProcessor pattern="ia64">IA_64</identifyProcessor>    
+    <identifyProcessor pattern="amd64">AMD_64</identifyProcessor>    
+    <identifyProcessor pattern="alpha">ALPHA</identifyProcessor>    
+    <identifyProcessor pattern="i386">I386</identifyProcessor>    
+    <identifyProcessor pattern="i586">I586</identifyProcessor>        
+    <identifyDevice pattern="Sprint">PHONE</identifyDevice>
+    <identifyDevice pattern="Smartphone">PHONE</identifyDevice>
+    <identifyDevice pattern="WebTV">WEBTV</identifyDevice>
+    <identifyDevice pattern="PLAYSTATION 3">CONSOLE</identifyDevice>   
+</userAgentConfig>

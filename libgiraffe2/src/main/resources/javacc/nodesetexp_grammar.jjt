@@ -1,0 +1,76 @@
+options {
+  MULTI = true;
+  LOOKAHEAD = 2;
+}
+
+PARSER_BEGIN(NodeSetExpressionParser)
+package hu.sztaki.ilab.giraffe.core.factories.nodesets;
+import java.io.*;
+
+public class NodeSetExpressionParser {
+}
+
+PARSER_END  (NodeSetExpressionParser)
+
+SKIP : /* white space */
+{
+  " "
+| "\t"
+| "\n"
+| "\r"
+}
+
+TOKEN: /* operators */
+{
+  < PLUS: "+" >
+|
+  < MINUS: "-" >
+|
+  <LPAREN : "("> 
+|
+  <RPAREN : ")">
+}
+
+TOKEN : /* numbers */
+{
+  < CONSTANT: (["@"])?(<CHAR>)+ >
+|
+  < #CHAR: ["a"-"z","A"-"Z","0"-"9",":","_","-"] >
+}
+
+/* grammar rules */
+
+SimpleNode Start() : {}        // Start -> Exp
+{
+  E() { return jjtThis; }
+}
+
+
+void E() : 
+{ }
+{
+  T() ((Plus() | Minus()) E())*
+}
+
+void T() : {}
+{
+  (<LPAREN> E() <RPAREN>) | Constant()
+}
+
+void Plus() :
+{}
+{
+    <PLUS> { jjtThis.value = "+"; }
+}
+
+void Minus() :
+{}
+{
+    <MINUS> { jjtThis.value = "-"; }
+}
+
+void Constant() :
+{ Token t; }
+{
+    t=<CONSTANT> { jjtThis.value = t.image; }
+}
