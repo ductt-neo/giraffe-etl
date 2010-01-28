@@ -28,20 +28,17 @@ public class ProcessMonitorBase implements ProcessMonitor {
         logger.info("Node entry (" + nodeId + ") " + recordsProcessed + " record processed.");
     }
 
-    public void onRouteEntry(String routeId, int recordsProcessed) {
-        logger.info("Route entry (" + routeId + ") " + recordsProcessed + " record processed.");
+    public void onRouteEntry(String sourceNodeId, String destNodeId, int recordsProcessed) {
+        logger.info("Route entry (" + sourceNodeId + " -> "+destNodeId+") " + recordsProcessed + " record processed.");
     }
 
     public void onError(hu.sztaki.ilab.giraffe.core.processingnetwork.ProcessingElementBaseClasses.Record errorRecord) {
-        String str = "";
-        for (Object o : errorRecord.getFields()) {
-            str += o.toString() + " ";
-        }
-        logger.error("Error: " + str);
+        // This function must be updated if the error record format changes!
+        ProcessingElementBaseClasses.logException(errorRecord);
     }
 
     public void customEvent(Class source, String eventIdentifier, Object details) {
-        logger.info("Custom event '"+eventIdentifier+"' from "+source.getCanonicalName()+" details: "+details.toString());
+        logger.info("Custom event '"+eventIdentifier+"' from "+source.getCanonicalName()+((details != null)?(" details: "+details.toString()):""));
     }
 
     public void onProcessStart() {
@@ -55,8 +52,5 @@ public class ProcessMonitorBase implements ProcessMonitor {
     public void onProcessFinish() {
         logger.info("ETL process finished.");
     }
-
-    public void onTerminalException(String terminalId, Throwable ex) {
-        logger.error("An error occured in terminal '"+terminalId+"' (probably a conversion error).", ex);
-    }
+    
 }

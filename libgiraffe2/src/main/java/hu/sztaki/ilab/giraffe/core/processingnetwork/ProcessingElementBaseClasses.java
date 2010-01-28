@@ -33,7 +33,7 @@ public class ProcessingElementBaseClasses {
 
     // defaultEvents is the "everything is OK" event set. When something goes wrong,
     // a new set is created, which contains updated state of the node.
-    protected final static java.util.Set<hu.sztaki.ilab.giraffe.schema.dataprocessing.EventType> defaultEvents =
+    public final static java.util.Set<hu.sztaki.ilab.giraffe.schema.dataprocessing.EventType> defaultEvents =
             java.util.Collections.unmodifiableSet(
             new java.util.HashSet<hu.sztaki.ilab.giraffe.schema.dataprocessing.EventType>(java.util.Arrays.asList(
             new hu.sztaki.ilab.giraffe.schema.dataprocessing.EventType[]{hu.sztaki.ilab.giraffe.schema.dataprocessing.EventType.META_OK})));
@@ -46,6 +46,19 @@ public class ProcessingElementBaseClasses {
         }
         else evSet.add(ev);
         return evSet;
+    }
+
+    public static void logException(Record errorRecord) {
+    try {
+            Throwable th = (Throwable)errorRecord.getField(0);
+            String nodeName = ((hu.sztaki.ilab.giraffe.core.processingnetwork.ProcessingElementBaseClasses.Record)errorRecord.getField(3)).getField(0).toString();
+            logger.error("An exception occured in node '"+nodeName+"'.", th);
+            while (null != (th = th.getCause())) {
+                logger.error("caused by ", th);
+            }
+        } catch (Exception ex) {
+            logger.error(ex);
+        }
     }
 
     // Processing networks must conform to this interface.
@@ -145,8 +158,7 @@ public class ProcessingElementBaseClasses {
                         // the run() function will never run concurrently.
                         events = defaultEvents;
                         createdRecord = importConversion(receivedRecord);
-                        send();
-                        this.recordsRead++;
+                        send();                        
                     }
                 } catch (Exception ex) {
                     logger.error("Unhandled exception occured: ", ex);
@@ -206,15 +218,7 @@ public class ProcessingElementBaseClasses {
 
         // Override this to route errorRecord to another data sink.
         protected void sendOnError(Record errorRecord) {
-            String str = "";
-            if (errorRecord != null) {
-                for (Object o : errorRecord.getFields()) {
-                    if (o != null) {
-                        str += o.toString() + " ";
-                    }
-                }
-            }
-            logger.error("ThreadedDataSink: export conversion failed! details: " + str);
+            logException(errorRecord);
         }
 
         // To handle export conversion errors by sending them to an error sink,

@@ -92,6 +92,7 @@
                                     <xsd:element name="errorRoute" type="tns:errorRoute" minOccurs="0" maxOccurs="unbounded" />
                                 </xsd:sequence>
                                 <xsd:attribute name="name" type="dt:name" use="required" />
+                                <xsd:attribute name="monitorFrequency" type="xsd:nonNegativeInteger" default="0" />
                             </xsd:complexType>
                         </xsd:element>
                         <xsd:element name="output" maxOccurs="unbounded">
@@ -102,6 +103,7 @@
                                     <xsd:element name="errorRoute" type="tns:errorRoute" minOccurs="0" maxOccurs="unbounded" />
                                 </xsd:sequence>
                                 <xsd:attribute name="name" type="dt:name" use="required" />
+                                <xsd:attribute name="monitorFrequency" type="xsd:nonNegativeInteger" default="0" />
                             </xsd:complexType>
                         </xsd:element>
                     </xsd:sequence>

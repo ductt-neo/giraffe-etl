@@ -226,6 +226,7 @@
                                         <xsd:element name="queueSize" type="xsd:integer" minOccurs="0" />
                                     </xsd:sequence>
                                     <xsd:attribute name="name" type="dt:name" use="required" />
+                                    <xsd:attribute name="monitorFrequency" type="xsd:nonNegativeInteger" default="0" />
                                 </xsd:complexType>
                             </xsd:element>
                         </xsd:choice>

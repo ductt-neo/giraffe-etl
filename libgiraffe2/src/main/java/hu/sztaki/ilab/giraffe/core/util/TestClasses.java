@@ -36,8 +36,8 @@ public class TestClasses {
 
   public static class AnotherClass {
       String ua,loc;
-      public boolean runTask(String ua, String loc) {this.ua = ua; this.loc = loc; return true;}
-      public String getLanguage() {return "lang for ua, log "+ua + loc;}
+      public boolean deriveLanguage(String ua, String loc) {this.ua = ua; this.loc = loc; return true;}
+      public String getLanguage() {return "hu";}
   }
 
   public static String fn1(String ip) {return "Resolved hostname for "+ip;}

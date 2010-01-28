@@ -70,6 +70,7 @@ public class ProcessFactory {
     private java.util.Map<String, DataSource> dataSources = new java.util.HashMap<String, DataSource>();
     private java.util.Map<String, DataSink> dataSinks = new java.util.HashMap<String, DataSink>();
     private TerminalFactory terminalFactory;
+    private java.util.Map<String,Integer> terminalMonitorFrequencies = new java.util.HashMap<String,Integer>();
 
     public ProcessFactory(
             ConfigurationManager configurationManager,
@@ -190,6 +191,7 @@ public class ProcessFactory {
         process.recordExporterThreadsLatch = this.terminalFactory.outputLatch;
         for (hu.sztaki.ilab.giraffe.schema.process_definitions.Process.Terminals.Input input : processDesc.getTerminals().getInput()) {
             // open record reader.
+            this.terminalMonitorFrequencies.put("input:"+input.getName(), input.getMonitorFrequency().intValue());
             RecordImporter imp = terminalFactory.getInputTerminal(input);
             if (imp == null) {
                 logger.error("Error instantiating data source " + input.getName() + ".");
@@ -205,6 +207,7 @@ public class ProcessFactory {
         }
         for (hu.sztaki.ilab.giraffe.schema.process_definitions.Process.Terminals.Output output : processDesc.getTerminals().getOutput()) {
             // if the data sink is not defined, use the default format.
+            this.terminalMonitorFrequencies.put("output:"+output.getName(), output.getMonitorFrequency().intValue());
             if (output.getDatasink() == null) {
                 output.setDatasink(defaults.getDataFormats().getDefaultDataSink());
             }
@@ -310,7 +313,9 @@ public class ProcessFactory {
                     logger.error("Referenced dataSource '" + refersTo + "' not defined in <terminals> section!");
                     return false;
                 }
-                if (!this.processingNetworkGenerator.addDataSource(refersTo, process.inputs.get(refersTo).getRecordFormat())) {
+                if (!this.processingNetworkGenerator.addDataSource(refersTo, 
+                        this.terminalMonitorFrequencies.get("input:"+refersTo),
+                        process.inputs.get(refersTo).getRecordFormat())) {
                     logger.error("Failed to add dataSource " + refersTo + " to processing network.");
                     return false;
                 }
@@ -322,7 +327,7 @@ public class ProcessFactory {
                     logger.error("Referenced dataSink '" + refersTo + "' not defined in <terminals> section!");
                     return false;
                 }
-                if (!this.processingNetworkGenerator.addDataSink(refersTo, process.outputs.get(refersTo).getRecordFormat())) {
+                if (!this.processingNetworkGenerator.addDataSink(refersTo, this.terminalMonitorFrequencies.get("output:"+refersTo),process.outputs.get(refersTo).getRecordFormat())) {
                     logger.error("Failed to add dataSink " + refersTo + " to processing network.");
                     return false;
                 }

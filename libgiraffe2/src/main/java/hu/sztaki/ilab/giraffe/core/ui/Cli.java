@@ -1,18 +1,18 @@
 /*
-   Copyright 2010 Computer and Automation Research Institute, Hungarian Academy of Sciences (SZTAKI)
+Copyright 2010 Computer and Automation Research Institute, Hungarian Academy of Sciences (SZTAKI)
 
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-       http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-*/
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+ */
 /*
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
@@ -22,6 +22,7 @@ package hu.sztaki.ilab.giraffe.core.ui;
 import hu.sztaki.ilab.giraffe.core.conversion.ConversionManager;
 import hu.sztaki.ilab.giraffe.core.factories.ProcessFactory;
 import hu.sztaki.ilab.giraffe.core.processingnetwork.ProcessMonitorBase;
+import hu.sztaki.ilab.giraffe.core.util.Pair;
 import hu.sztaki.ilab.giraffe.core.xml.ConfigurationManager;
 import org.apache.log4j.xml.DOMConfigurator;
 import org.apache.log4j.Logger;
@@ -89,6 +90,31 @@ public class Cli {
                 " NSIP is the ip address of the domain name server to use for r-DNS lookups.";
     }
 
+    public static class CLIProcessMonitor extends ProcessMonitorBase {
+
+        // Override customEvent to provide a friendlier message:
+        public void customEvent(Class source, String eventIdentifier, Object details) {
+            if (source.equals(hu.sztaki.ilab.giraffe.core.io.FileReader.class)) {
+                if ("openNextFile".equals(eventIdentifier)) {
+                    try {
+                        Pair<String,Boolean> status = (Pair<String,Boolean>) details;
+                        if (status.second) {
+                            logger.info("Successfully opened input file "+status.first+" for reading.");
+                        } else {
+                            logger.error("Error opening input file "+status.first+" for reading.");
+                        }
+                    } catch (Exception ex) {logger.error(ex);}
+                    return;
+                }
+                if ("EOF".equals(eventIdentifier)) {
+                    logger.info("Reach end of current input file.");
+                    return;
+                }
+            }
+            super.customEvent(source, eventIdentifier, details);
+        }
+    }
+
     public static void main(String[] args) {
         try {
             // Configure log4j.
@@ -103,7 +129,7 @@ public class Cli {
             }
             ConversionManager conversionManager = new ConversionManager(configurationManager);
             ProcessFactory processFactory = new ProcessFactory(configurationManager, conversionManager);
-            hu.sztaki.ilab.giraffe.core.processingnetwork.Process process = processFactory.get(configurationManager.getRequestedProcessName(), new ProcessMonitorBase());
+            hu.sztaki.ilab.giraffe.core.processingnetwork.Process process = processFactory.get(configurationManager.getRequestedProcessName(), new CLIProcessMonitor());
             if (null == process) {
                 return;
             }
@@ -124,6 +150,6 @@ public class Cli {
         } catch (Exception ex) {
             logger.error("Uncaught exception encountered (logged).", ex);
             System.exit(1);
-        }        
+        }
     }
 }

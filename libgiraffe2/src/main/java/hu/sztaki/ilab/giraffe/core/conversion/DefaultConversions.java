@@ -32,9 +32,41 @@ import javax.xml.namespace.QName;
 public class DefaultConversions {
 
     static final org.apache.log4j.Logger logger = org.apache.log4j.Logger.getLogger(DefaultConversions.class);
-    @Conversion
-    public static Integer stringToInteger(String str) {
-        return Integer.parseInt(str);
+    public static class IntConverter {
+        private Parameters param = null;
+        private Integer defaultValue = null;
+        public IntConverter(Parameters param) {
+            this.param = param;
+        }
+        public IntConverter() {}
+        public boolean init() {
+            if (param != null) {
+                try {
+                    defaultValue = Integer.parseInt(param.getOtherAttributes().get(new QName("default")));
+                } catch (Exception ex) {
+                    logger.error(ex);
+                    return false;
+                }
+            }
+            return true;
+        }
+        @Conversion(name="string2int")
+        public int string2int(String s) {
+            if (s == null) {
+                if (defaultValue != null) return defaultValue;
+                else throw new NullPointerException();
+            }
+            try {
+                return Integer.parseInt(s);
+            } catch (NumberFormatException ex) {
+                if (defaultValue != null) return defaultValue;
+                else throw ex;
+            }
+        }
+        @Conversion(name="int2string")
+        public String int2string(int i) {
+            return i + "";
+        }
     }
 
     @Conversion
@@ -50,7 +82,7 @@ public class DefaultConversions {
         java.text.DateFormat df;
 
         public boolean init() {
-            try {
+            try {                
                 df = new java.text.SimpleDateFormat(formatString);
             } catch (Exception ex) {
                 logger.error("Error initializing DefaultConversions.DateConverter: ", ex);
@@ -65,10 +97,11 @@ public class DefaultConversions {
 
         @Conversion(name="string2date")
         public java.util.Date stringToDate(String s) {
+            if (s == null) return null;
             try {
             return df.parse(s);
             } catch (java.text.ParseException ex) {
-                return null;
+                throw new RuntimeException(ex);
             }
         }
 
@@ -76,5 +109,13 @@ public class DefaultConversions {
         public String dateToString(java.util.Date d) {
             return df.format(d);
         }
+    }
+
+    public static void main(String[] args) {
+        Parameters p = new Parameters();
+        p.getOtherAttributes().put(new QName("format"),"dd/MMM/yyyy:HH:mm:ss ZZZZZ");
+        DateConverter dc = new DateConverter(p);
+        if (!dc.init()) System.out.print("Failed to init!");
+        System.out.print(dc.stringToDate("04/Nov/2009:02:01:13 +0100").getMinutes());        
     }
 }

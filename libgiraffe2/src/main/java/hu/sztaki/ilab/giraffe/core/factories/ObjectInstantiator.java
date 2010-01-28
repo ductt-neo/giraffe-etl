@@ -112,7 +112,7 @@ public class ObjectInstantiator {
                 }
                 try {
                     Method initMethod = c.getMethod("init",new Class[] {});
-                    if ("boolean".equals(ConversionManager.getType(initMethod.getReturnType())) &&
+                    if (boolean.class.equals(initMethod.getReturnType()) &&
                             Modifier.isPublic(initMethod.getModifiers()) &&
                             !Modifier.isStatic(initMethod.getModifiers())) {
                         java.lang.Boolean ret = (java.lang.Boolean)initMethod.invoke(newInstance, new java.lang.Object[] {});

@@ -18,7 +18,7 @@ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" >
     <process name="test">
         <terminals>
             <!-- The input of this process will be file(s).  -->
-            <input name="logfile">
+            <input name="logfile" monitorFrequency="0">
                 <datasource>
                     <df:format>
                         <df:streamFormat>
@@ -72,15 +72,22 @@ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" >
                 </datasource>
                 <conversionHint field="hit_timestamp">
                     <name>string2date</name>
-                    <parameters format="d/M/y:H:m:s Z" />
-                    <!--04/Nov/2009:02:01:13 +0100-->
+                    <parameters format="dd/MMM/yyyy:HH:mm:ss ZZZZZ" />                    
+                </conversionHint>
+                <conversionHint field="http_status">
+                    <name>string2int</name>
+                    <parameters default="0" />
+                </conversionHint>
+                <conversionHint field="bytes_sent">
+                    <name>string2int</name>
+                    <parameters default="0" />
                 </conversionHint>
             </input>
             <!-- Use default formats for output files. -->
             <output name="fact">
                 <conversionHint field="hit_timestamp">
                     <name>date2string</name>
-                    <parameters format="d/M/y:H:m:s Z" />
+                    <parameters format="dd/MMM/yyyy:HH:mm:ss ZZZZZ" />
                 </conversionHint>
                 <errorRoute>
                     <destination>conversion_errors</destination>
@@ -98,7 +105,7 @@ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" >
                 <dp:outputRef>error_discard</dp:outputRef>
                 <dp:outputRef>no_destination_discard</dp:outputRef>
             </dp:io>
-            <dp:node name="block0" monitorFrequency="5">
+            <dp:node name="block0" monitorFrequency="0">
                 <dp:receivedFields>
                     <df:column name="webserver" javaType="java.lang.String" />
                     <df:column name="client_ip" javaType="java.lang.String" />
@@ -157,6 +164,7 @@ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" >
                 <dp:tasks>
                     <dp:call>
                         <dt:class>hu.sztaki.ilab.giraffe.core.util.TestClasses$AnotherClass</dt:class>
+                        <dt:method>deriveLanguage</dt:method>
                         <dt:input field="user_agent" />
                         <dt:input field="client_location" />
                         <dt:output variable="language" field="user_language" />
@@ -172,7 +180,7 @@ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" >
                 <dp:destination>block1</dp:destination>
                 <dp:mapField source="received:webserver" destination="server" />
             </dp:route>
-            <dp:route monitorFrequency="15">
+            <dp:route>
                 <dp:source>block1</dp:source>
                 <dp:destination>fact</dp:destination>
                 <dp:mapExpression expression="* = received:, * = created:" />
@@ -183,18 +191,26 @@ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" >
                 <dp:destination>error_discard</dp:destination>
                 <dp:mapExpression expression="* - ex = error:"/>
                 <dp:condition>
+                    <dt:and>
+                        <dt:not>
+                        <dt:predicate>
+                            <dp:eventType>routing:record-has-been-delivered</dp:eventType>
+                        </dt:predicate>
+                        </dt:not>
                     <dt:not>
                         <dt:predicate>
                             <dp:eventType>meta:ok</dp:eventType>
                         </dt:predicate>
                     </dt:not>
+                    </dt:and>
+                    
                 </dp:condition>
             </dp:route>
             <!-- no destination discards -->
             <dp:route>
                 <dp:source>@all - no_destination_discard</dp:source>
                 <dp:destination>no_destination_discard</dp:destination>
-                <dp:mapExpression expression="received = java.lang.Object[] {(null!=receivedRecord)?receivedRecord.getFields():null}, created = java.lang.Object[] {(null!=createdRecord)?createdRecord.getFields():null}"/>
+                <dp:mapExpression expression="received = ProcessingElementBaseClasses.Record {receivedRecord}, created = ProcessingElementBaseClasses.Record {createdRecord}"/>
                 <dp:condition>
                     <dt:not>
                         <dt:predicate>

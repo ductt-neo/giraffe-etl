@@ -138,7 +138,7 @@ public class ConversionManager {
                 inst.setParameters(cfn.parameters);
                 return objInst.generateCallingCode(inst, input);
             case INSTANCE_METHOD: // The conversion method is a member of the input object, like toString()
-                return input + "." + cfn.methodName + "()";
+                return "(("+input+"==null)?null:"+input + "." + cfn.methodName + "())";
         }
         return null;
     }
@@ -340,6 +340,16 @@ public class ConversionManager {
             s.add(getType(t));
         }
         return StringUtils.printContainer(s.iterator(), ",");
+    }  
+
+    private static Class convertPrimitiveClasses(Class c) {
+        if (c.equals(int.class)) return java.lang.Integer.class;
+        if (c.equals(long.class)) return java.lang.Long.class;
+        if (c.equals(float.class)) return java.lang.Float.class;
+        if (c.equals(boolean.class)) return java.lang.Boolean.class;
+        if (c.equals(double.class)) return java.lang.Double.class;
+        if (c.equals(char.class)) return java.lang.Character.class;
+        return c;
     }
 
     public static String getType(Type t) {
@@ -355,7 +365,9 @@ public class ConversionManager {
         } else {
             try {
                 Class c = (Class) t;
-                return c.getName();
+                c = convertPrimitiveClasses(c);
+                if (c.getComponentType() == null) return c.getCanonicalName();
+                return c.getComponentType().getCanonicalName()+"[]";
             } catch (ClassCastException ex1) {
                 try {
                     java.lang.reflect.GenericArrayType a = (java.lang.reflect.GenericArrayType) t;
@@ -369,11 +381,11 @@ public class ConversionManager {
     }
 
     // For testing:
-    //public static void fn1(int a, long b, String c, int[] e, java.util.List<Integer> f, java.util.Map<String, java.util.List<java.util.Set<java.util.Date>>> g, java.util.List<?> h) {}
+    public static void fn1(int a, long b, String c, int[] e, java.util.List<Integer> f, java.util.Map<String, java.util.List<java.util.Set<java.util.Date>>> g, java.util.List<?>[] h) {}
     public static void main(String[] args) {
         for (Method m : ConversionManager.class.getMethods()) {
             //System.out.println(m.getName() + " "+StringUtils.printContainer(Arrays.asList(m.getParameterTypes()).iterator(),","));
-            System.out.println(m.getName() + " " + getType(m.getGenericParameterTypes()));
+            System.out.println(m.getName() + ": " + getType(m.getGenericParameterTypes()));
         }
     }
 }
