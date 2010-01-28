@@ -63,19 +63,18 @@ public class FileReader extends StreamRecordImporter {
         while (this.stream == null) {
             this.stream = openNextFile();
         }
-        if (this.stream == null) {
-            if (processMonitor != null) processMonitor.customEvent(FileReader.class, "read", "EndOfInput");
+        if (this.stream == null) {            
             return null; // no more files to read.            
         }
         java.util.List<String> line = null;
         line = super.read();
         if (line == null) {
+            if (processMonitor != null) processMonitor.customEvent(FileReader.class, "EOF", null);
             getStream().close();
             StreamRecordImporter.logger.debug("Current file contains no more lines. Moving on to next input file if any.");
             java.io.BufferedReader input = openNextFile();
             // If we are out of files to read, return null.
-            if (null == input) {
-                if (processMonitor != null) processMonitor.customEvent(FileReader.class, "read", "EndOfInput");
+            if (null == input) {                
                 return null;
             }
             super.setStream(input);

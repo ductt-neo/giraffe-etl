@@ -26,7 +26,8 @@
         <df:format>
          <df:streamFormat>
            <df:encoding>UTF-8</df:encoding>
-           <df:newline>\n</df:newline>
+           <!-- this is the XML version of '\n' -->
+           <df:newline>&#xA;</df:newline>
            <df:separator>|</df:separator>
            <df:escape>\</df:escape>
            <df:fields/><!-- fields are not known at this point -->

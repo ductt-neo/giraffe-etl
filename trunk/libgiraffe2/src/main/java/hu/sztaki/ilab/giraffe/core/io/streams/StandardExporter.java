@@ -52,13 +52,15 @@ public class StandardExporter implements LineExporter {
         }
         addSpecialString(format.getEscape());
         addSpecialString(format.getSeparator());
+        columnSeparator = format.getSeparator();
+
     }
 
     public String export(Object[] fields) {
         java.io.StringWriter exportStream = new java.io.StringWriter();
         boolean firstColumn = true;
         for (Object fieldObject : fields) {
-            String currentField = fieldObject.toString();
+            String currentField = (fieldObject==null)?"":fieldObject.toString();
             if (!firstColumn) {
                 // add column separator
                 exportStream.write(columnSeparator);

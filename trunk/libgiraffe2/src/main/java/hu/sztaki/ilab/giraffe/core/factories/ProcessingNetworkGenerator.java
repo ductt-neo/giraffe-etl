@@ -259,6 +259,12 @@ public class ProcessingNetworkGenerator {
                 index++;
             }
             codeWriter.write("  }\n");
+            codeWriter.write("  public String toString() { return \"\" \n");
+            for (Pair<String, String> currentField : this.record) {
+                codeWriter.write("    + \"|\"+((" + currentField.second + " != null)?" + currentField.second + ":\"\")\n");
+                index++;
+            }
+            codeWriter.write("  ;}\n");
             // close class.
             codeWriter.write("  }\n");
             return codeWriter.toString();
@@ -320,11 +326,13 @@ public class ProcessingNetworkGenerator {
         hu.sztaki.ilab.giraffe.schema.dataprocessing.RecordRoute routeDefinition;
         RecordMapping receivedFieldsMapping;
         RouteCondition onEvent = new RouteCondition();
+        int monitorFrequency = 0;
 
         public RecordRoute(ProcessingNetworkNode source, ProcessingNetworkNode destination, hu.sztaki.ilab.giraffe.schema.dataprocessing.RecordRoute routeDefinition) {
             this.source = source;
             this.destination = destination;
             this.routeDefinition = routeDefinition;
+            this.monitorFrequency = routeDefinition.getMonitorFrequency().intValue();
         }
     }
 
@@ -377,6 +385,7 @@ public class ProcessingNetworkGenerator {
         // The most important properties of a processing network node are:
         // The name of the node.
 
+        ProcessingNetworkGenerator getGenerator() {return ProcessingNetworkGenerator.this;}
         protected String nodeName;
         // The source code of the classes which contain data and perform functions for the node.
         protected ProcessingNodeSource src;
@@ -387,9 +396,11 @@ public class ProcessingNetworkGenerator {
         protected java.util.List<ProcessingNetworkGenerator.RecordRoute> incomingRoutes = new java.util.LinkedList<ProcessingNetworkGenerator.RecordRoute>();
         // Outgoing routes to other nodes.
         protected java.util.List<ProcessingNetworkGenerator.RecordRoute> outgoingRoutes = new java.util.LinkedList<ProcessingNetworkGenerator.RecordRoute>();
+        int monitorFrequency = 0;
 
-        public ProcessingNetworkNode(String nodeName) {
+        public ProcessingNetworkNode(String nodeName, int monitorFrequency) {
             this.nodeName = nodeName;
+            this.monitorFrequency = monitorFrequency;
         }
 
         public void init() {
@@ -451,8 +462,8 @@ public class ProcessingNetworkGenerator {
         boolean isDataSource;
         // STUB
 
-        public VirtualIONode(String nodeName, boolean isDataSource) {
-            super(nodeName);
+        public VirtualIONode(String nodeName, int monitorFrequency, boolean isDataSource) {
+            super(nodeName, monitorFrequency);
             this.isDataSource = isDataSource;
         }
 
@@ -481,7 +492,7 @@ public class ProcessingNetworkGenerator {
 
         class SourceCode extends InnerNodeSource {
 
-            ObjectInstantiator conversionObjectInstantiator = new ObjectInstantiator("conv");
+            ObjectInstantiator conversionObjectInstantiator = new ObjectInstantiator("conv_"+DataSourceNode.this.getName()+"_");
 
             public SourceCode() {
                 super(DataSourceNode.this, ProcessingNetworkGenerator.this.networkName);
@@ -524,6 +535,7 @@ public class ProcessingNetworkGenerator {
 
             private void writeImportConversion(StringWriter codeWriter) {
                 codeWriter.write("  public " + DataSourceNode.this.records.get("created").className + " importConversion(" + DataSourceNode.this.records.get("received").className + " record) { \n");
+                writeProcessMonitorInvocation(codeWriter);
                 codeWriter.write("  try { // place conversion within a try... block so potential exceptions are caught.\n");
                 codeWriter.write("    return new " + DataSourceNode.this.records.get("created").className + "(");
                 boolean first = true;
@@ -546,6 +558,9 @@ public class ProcessingNetworkGenerator {
                 codeWriter.write("  } catch (Exception ex) {\n");
                 codeWriter.write("    this.events = ProcessingElementBaseClasses.addEvent(this.events, EventType.ERROR_CONVERSION_FAILED);\n");
                 codeWriter.write("    updateErrorRecord(ex);\n");
+                if (node.getGenerator().process.monitor != null) {
+                    codeWriter.write("    "+this.networkName+".this.process.monitor.onError("+ProcessingNetworkGenerator.standardInstanceNames.get("error")+");\n");
+                }
                 codeWriter.write("    return new " + DataSourceNode.this.records.get("created").className + "();\n");
                 codeWriter.write("  }\n");
                 codeWriter.write("  }\n");
@@ -566,8 +581,8 @@ public class ProcessingNetworkGenerator {
             }
         }
 
-        public DataSourceNode(String nodeName, RecordDefinition receivedFieldDefinition) {
-            super(nodeName);
+        public DataSourceNode(String nodeName, int monitorFrequency, RecordDefinition receivedFieldDefinition) {
+            super(nodeName, monitorFrequency);
             this.receivedFieldDefinition = receivedFieldDefinition;
         }
 
@@ -599,7 +614,7 @@ public class ProcessingNetworkGenerator {
 
         class SourceCode extends InnerNodeSource {
 
-            ObjectInstantiator conversionObjectInstantiator = new ObjectInstantiator("conv");
+            ObjectInstantiator conversionObjectInstantiator = new ObjectInstantiator("conv_"+DataSinkNode.this.getName()+"_");
 
             public SourceCode() {
                 super(DataSinkNode.this, ProcessingNetworkGenerator.this.networkName);
@@ -668,8 +683,8 @@ public class ProcessingNetworkGenerator {
             }
         }
 
-        public DataSinkNode(String nodeName, RecordDefinition createdFieldDefinition) {
-            super(nodeName);
+        public DataSinkNode(String nodeName, int monitorFrequency, RecordDefinition createdFieldDefinition) {
+            super(nodeName, monitorFrequency);
             this.createdFieldDefinition = createdFieldDefinition;
         }
 
@@ -707,8 +722,8 @@ public class ProcessingNetworkGenerator {
             }
         }
 
-        public AsyncPipeNode(String nodeName) {
-            super(nodeName);
+        public AsyncPipeNode(String nodeName, int monitorFrequency) {
+            super(nodeName, monitorFrequency);
         }
 
         public boolean isDataSink() {
@@ -739,29 +754,29 @@ public class ProcessingNetworkGenerator {
         this.process = process;
     }
 
-    public boolean addDataSource(String name, RecordDefinition ReceivedRecord) {
-        ProcessingNetworkNode dsNode = new DataSourceNode(name, ReceivedRecord);
+    public boolean addDataSource(String name, int monitorFrequency, RecordDefinition ReceivedRecord) {
+        ProcessingNetworkNode dsNode = new DataSourceNode(name, monitorFrequency, ReceivedRecord);
         dsNode.init();
         nodes.put(name, dsNode);
         return true;
     }
 
-    public boolean addDataSink(String name, RecordDefinition dsDefinition) {
+    public boolean addDataSink(String name, int monitorFrequency, RecordDefinition dsDefinition) {
         // --- create associated processing node ---
-        ProcessingNetworkNode dsNode = new DataSinkNode(name, dsDefinition);
+        ProcessingNetworkNode dsNode = new DataSinkNode(name, monitorFrequency, dsDefinition);
         dsNode.init();
         nodes.put(name, dsNode);
         return true;
     }
 
     public boolean addAsyncPipe(hu.sztaki.ilab.giraffe.schema.dataprocessing.ProcessingNetwork.Io.AsyncPipe pipe) {
-        ProcessingNetworkNode node = new AsyncPipeNode(pipe.getName());
+        ProcessingNetworkNode node = new AsyncPipeNode(pipe.getName(), pipe.getMonitorFrequency().intValue());
         nodes.put(pipe.getName(), node);
         return true;
     }
 
     public boolean addNode(String nodeName, hu.sztaki.ilab.giraffe.schema.dataprocessing.ProcessingNode nodeDef) {
-        ProcessingNetworkNode node = new ProcessingNetworkNode(nodeDef.getName());
+        ProcessingNetworkNode node = new ProcessingNetworkNode(nodeDef.getName(), nodeDef.getMonitorFrequency().intValue());
         node.init();
         // Save receievedFields:
         for (NativeColumn col : nodeDef.getReceivedFields().getColumn()) {
