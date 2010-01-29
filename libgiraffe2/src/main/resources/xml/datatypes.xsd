@@ -131,7 +131,7 @@
     </xsd:group>
 
     <xsd:complexType name="varToFieldMapping">
-        <xsd:attribute name="variable" type="tns:name" />
+        <xsd:attribute name="variable" type="xsd:string" />
         <xsd:attribute name="field" type="tns:name" use="required" />
     </xsd:complexType>
 

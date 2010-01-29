@@ -321,6 +321,14 @@ public class ExpressionParsers {
                         }
                     };
                 }
+                if ("@pipes".equals(exp)) {
+                    filter = new NodeSetFilter() {
+
+                        public boolean keeper(ProcessingNetworkGenerator.ProcessingNetworkNode n) {
+                            return n.isDataSink() && n.isDataSource();
+                        }
+                    };
+                }
                 if (filter == null) {
                     logger.error("Node set expression '" + exp + "' could not be interpretted.");
                     return null;

@@ -19,7 +19,6 @@
  */
 package hu.sztaki.ilab.giraffe.core.factories;
 
-import hu.sztaki.ilab.giraffe.core.util.Pair;
 import hu.sztaki.ilab.giraffe.core.util.StringUtils;
 import hu.sztaki.ilab.giraffe.schema.datatypes.EventCondition;
 

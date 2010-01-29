@@ -1,25 +1,25 @@
 /*
-   Copyright 2010 Computer and Automation Research Institute, Hungarian Academy of Sciences (SZTAKI)
+Copyright 2010 Computer and Automation Research Institute, Hungarian Academy of Sciences (SZTAKI)
 
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-       http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-*/
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+ */
 /*
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
 package hu.sztaki.ilab.giraffe.core.xml;
 
-import hu.sztaki.ilab.giraffe.core.Globals;
+import com.sun.org.apache.xerces.internal.util.XMLCatalogResolver;
 import hu.sztaki.ilab.giraffe.schema.report.Report;
 import java.io.File;
 import javax.xml.bind.ValidationEventHandler;
@@ -33,7 +33,21 @@ import org.apache.log4j.Logger;
  */
 public class XMLUtils {
 
-    private static Logger logger = Logger.getLogger(XMLUtils.class);
+    private final static Logger logger = Logger.getLogger(XMLUtils.class);
+    private static XMLCatalogResolver catalogResolver = null;
+
+    static {
+        try {
+            catalogResolver = new XMLCatalogResolver(new String[]{ClassLoader.getSystemResource("xml/giraffeCatalog.xml").toURI().toString()});
+        } catch (Exception ex) {
+            logger.error("Error locating XML catalog: ", ex);
+            System.exit(1);
+        }
+    }
+
+    public static XMLCatalogResolver getCatalogResolver() {
+        return catalogResolver;
+    }
 
     @SuppressWarnings("unchecked")
     public static <K> K unmarshallXmlFile(Class<K> targetClass, String targetNamespace, java.net.URL inputURL) {
@@ -42,14 +56,14 @@ public class XMLUtils {
             javax.xml.bind.Unmarshaller unmarshaller = jaxbCtx.createUnmarshaller();
             unmarshaller.setSchema(getSchema(targetNamespace));
             unmarshaller.setEventHandler(new ValidationEventHandler() {
+
                 public boolean handleEvent(javax.xml.bind.ValidationEvent evt) {
-                    logger.error("JAXB unmarshall event: "+evt.getMessage());
+                    logger.error("JAXB unmarshall event: " + evt.getMessage());
                     return true;
                 }
-            }
-            );
+            });
             try {
-            return (K) ((javax.xml.bind.JAXBElement<K>) unmarshaller.unmarshal(inputURL)).getValue();
+                return (K) ((javax.xml.bind.JAXBElement<K>) unmarshaller.unmarshal(inputURL)).getValue();
             } catch (ClassCastException e) {
                 return (K) unmarshaller.unmarshal(inputURL);
             }
@@ -59,27 +73,22 @@ public class XMLUtils {
         return null;
     }
 
-    public static <K> K unmarshallXmlFile(Class<K> targetClass, String packages, String targetNamespace, java.net.URL inputURL) {
+    public static <K> K unmarshallXmlFile(Class<K> targetClass, String packages, String targetNamespace, java.net.URL inputURL) throws Throwable {
+        javax.xml.bind.JAXBContext jaxbCtx = javax.xml.bind.JAXBContext.newInstance(packages);
+        javax.xml.bind.Unmarshaller unmarshaller = jaxbCtx.createUnmarshaller();
+        unmarshaller.setSchema(getSchema(targetNamespace));
+        unmarshaller.setEventHandler(new ValidationEventHandler() {
+
+            public boolean handleEvent(javax.xml.bind.ValidationEvent evt) {
+                logger.error("JAXB unmarshall event: " + evt.getMessage());
+                return true;
+            }
+        });
         try {
-            javax.xml.bind.JAXBContext jaxbCtx = javax.xml.bind.JAXBContext.newInstance(packages);
-            javax.xml.bind.Unmarshaller unmarshaller = jaxbCtx.createUnmarshaller();
-            unmarshaller.setSchema(getSchema(targetNamespace));
-            unmarshaller.setEventHandler(new ValidationEventHandler() {
-                public boolean handleEvent(javax.xml.bind.ValidationEvent evt) {
-                    logger.error("JAXB unmarshall event: "+evt.getMessage());
-                    return true;
-                }
-            }
-            );
-            try {
             return (K) ((javax.xml.bind.JAXBElement<K>) unmarshaller.unmarshal(inputURL)).getValue();
-            } catch (ClassCastException e) {
-                return (K) unmarshaller.unmarshal(inputURL);
-            }
-        } catch (Exception ex) {
-            logger.error("Error unmarshalling " + inputURL, ex);
+        } catch (ClassCastException e) {
+            return (K) unmarshaller.unmarshal(inputURL);
         }
-        return null;
     }
 
     public static boolean writeReportXml(Report report, File output) throws javax.xml.bind.JAXBException, org.xml.sax.SAXException {
@@ -106,18 +115,18 @@ public class XMLUtils {
     public static Schema getSchema(String namespace) throws org.xml.sax.SAXException, java.io.IOException, java.net.URISyntaxException {
         SchemaFactory sf = SchemaFactory.newInstance(javax.xml.XMLConstants.W3C_XML_SCHEMA_NS_URI);
         java.net.URI schemaURI = getSchemaForNamespace(namespace);
-        sf.setResourceResolver(Globals.getCatalogResolver());
+        sf.setResourceResolver(getCatalogResolver());
         Schema schema = sf.newSchema(schemaURI.toURL());
         return schema;
     }
 
     public static java.net.URI getSchemaForNamespace(String namespace) throws java.io.IOException, java.net.URISyntaxException {
-        return new java.net.URI(Globals.getCatalogResolver().resolveURI(namespace));
+        return new java.net.URI(getCatalogResolver().resolveURI(namespace));
     }
 
     public static void main(String[] args) {
         try {
-            getSchema("http://info.ilab.sztaki.hu/giraffe/conversions");
+            XMLUtils.getSchema("http://info.ilab.sztaki.hu/giraffe/defaults");
         } catch (Exception ex) {
             ex.printStackTrace();
         }

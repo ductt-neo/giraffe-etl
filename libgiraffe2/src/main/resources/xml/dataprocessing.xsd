@@ -223,7 +223,7 @@
                                 <xsd:complexType>
                                     <xsd:sequence>
                                         <!-- the size of the queue used to hold records put into the pipe but not yet taken out. -->
-                                        <xsd:element name="queueSize" type="xsd:integer" minOccurs="0" />
+                                        <xsd:element name="queueSize" type="xsd:positiveInteger" minOccurs="0" />
                                     </xsd:sequence>
                                     <xsd:attribute name="name" type="dt:name" use="required" />
                                     <xsd:attribute name="monitorFrequency" type="xsd:nonNegativeInteger" default="0" />

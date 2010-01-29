@@ -148,7 +148,7 @@ public class Cli {
             }
              */
         } catch (Exception ex) {
-            logger.error("Uncaught exception encountered (logged).", ex);
+            logger.error("Uncaught exception encountered.", ex);
             System.exit(1);
         }
     }

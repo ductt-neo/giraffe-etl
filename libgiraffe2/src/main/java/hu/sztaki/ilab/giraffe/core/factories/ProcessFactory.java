@@ -67,10 +67,9 @@ public class ProcessFactory {
     private hu.sztaki.ilab.giraffe.schema.process_definitions.Definitions definitions;
     private hu.sztaki.ilab.giraffe.schema.defaults.Defaults defaults;
     private ProcessingNetworkGenerator processingNetworkGenerator = null;
-    private java.util.Map<String, DataSource> dataSources = new java.util.HashMap<String, DataSource>();
-    private java.util.Map<String, DataSink> dataSinks = new java.util.HashMap<String, DataSink>();
-    private TerminalFactory terminalFactory;
-    private java.util.Map<String,Integer> terminalMonitorFrequencies = new java.util.HashMap<String,Integer>();
+    private java.util.Map<String, hu.sztaki.ilab.giraffe.schema.process_definitions.Process.Terminals.Input> inputs = new java.util.HashMap<String, hu.sztaki.ilab.giraffe.schema.process_definitions.Process.Terminals.Input>();
+    private java.util.Map<String, hu.sztaki.ilab.giraffe.schema.process_definitions.Process.Terminals.Output> outputs = new java.util.HashMap<String, hu.sztaki.ilab.giraffe.schema.process_definitions.Process.Terminals.Output>();
+    private TerminalFactory terminalFactory;    
 
     public ProcessFactory(
             ConfigurationManager configurationManager,
@@ -151,6 +150,7 @@ public class ProcessFactory {
             return false;
         }
         logger.info("Using defaults file " +defaultsFile.toString());
+        try {
         defaults =
                 hu.sztaki.ilab.giraffe.core.xml.XMLUtils.unmarshallXmlFile(
                 hu.sztaki.ilab.giraffe.schema.defaults.Defaults.class,
@@ -158,6 +158,10 @@ public class ProcessFactory {
                 "hu.sztaki.ilab.giraffe.schema.dataprocessing:" +
                 "hu.sztaki.ilab.giraffe.schema.datatypes:",
                 "http://info.ilab.sztaki.hu/giraffe/schema/defaults", defaultsFile);
+        } catch (Throwable th) {
+            logger.error("Error loading defaults file",th);
+            return false;
+        }
         if (null == defaults) {
             logger.error("Failed to load defaults");
             return false;
@@ -169,6 +173,7 @@ public class ProcessFactory {
         if (null == defFile) {
             return false;
         }
+        try {
         definitions =
                 hu.sztaki.ilab.giraffe.core.xml.XMLUtils.unmarshallXmlFile(
                 hu.sztaki.ilab.giraffe.schema.process_definitions.Definitions.class,
@@ -176,6 +181,10 @@ public class ProcessFactory {
                 "hu.sztaki.ilab.giraffe.schema.dataprocessing:" +
                 "hu.sztaki.ilab.giraffe.schema.datatypes:",
                 "http://info.ilab.sztaki.hu/giraffe/schema/process_definitions", defFile);
+        } catch (Throwable th) {
+            logger.error("Error loading process definitions file. ", th);
+            return false;
+        }
         if (null == definitions) {
             logger.error("Failed to load process definitions");
             return false;
@@ -190,8 +199,7 @@ public class ProcessFactory {
         process.recordImporterThreadsLatch = this.terminalFactory.inputLatch;
         process.recordExporterThreadsLatch = this.terminalFactory.outputLatch;
         for (hu.sztaki.ilab.giraffe.schema.process_definitions.Process.Terminals.Input input : processDesc.getTerminals().getInput()) {
-            // open record reader.
-            this.terminalMonitorFrequencies.put("input:"+input.getName(), input.getMonitorFrequency().intValue());
+            // open record reader.            
             RecordImporter imp = terminalFactory.getInputTerminal(input);
             if (imp == null) {
                 logger.error("Error instantiating data source " + input.getName() + ".");
@@ -203,11 +211,10 @@ public class ProcessFactory {
             for (ConversionHint hint : input.getConversionHint()) {
                 conversionManager.registerConversionHint("datasource", input.getName(), hint);
             }
-            this.dataSources.put(input.getName(), input.getDatasource());
+            this.inputs.put(input.getName(), input);
         }
         for (hu.sztaki.ilab.giraffe.schema.process_definitions.Process.Terminals.Output output : processDesc.getTerminals().getOutput()) {
-            // if the data sink is not defined, use the default format.
-            this.terminalMonitorFrequencies.put("output:"+output.getName(), output.getMonitorFrequency().intValue());
+            // if the data sink is not defined, use the default format.            
             if (output.getDatasink() == null) {
                 output.setDatasink(defaults.getDataFormats().getDefaultDataSink());
             }
@@ -221,7 +228,7 @@ public class ProcessFactory {
             for (ConversionHint hint : output.getConversionHint()) {
                 conversionManager.registerConversionHint("datasink", output.getName(), hint);
             }
-            this.dataSinks.put(output.getName(), output.getDatasink());
+            this.outputs.put(output.getName(), output);
         }
         return true;
     }
@@ -308,26 +315,24 @@ public class ProcessFactory {
             // ioObject can either be a String or an asyncPipe object.
             if ("inputRef".equals(ioElement.getName().getLocalPart())) {
                 String refersTo = (String) ioElement.getValue();
-                DataSource ds = this.dataSources.get(refersTo);
-                if (ds == null) {
+                hu.sztaki.ilab.giraffe.schema.process_definitions.Process.Terminals.Input inputDesc = this.inputs.get(refersTo);
+                if (inputDesc == null) {
                     logger.error("Referenced dataSource '" + refersTo + "' not defined in <terminals> section!");
                     return false;
                 }
-                if (!this.processingNetworkGenerator.addDataSource(refersTo, 
-                        this.terminalMonitorFrequencies.get("input:"+refersTo),
-                        process.inputs.get(refersTo).getRecordFormat())) {
+                if (!this.processingNetworkGenerator.addDataSource(refersTo, inputDesc, process.inputs.get(refersTo).getRecordFormat())) {
                     logger.error("Failed to add dataSource " + refersTo + " to processing network.");
                     return false;
                 }
             }
             if ("outputRef".equals(ioElement.getName().getLocalPart())) {
                 String refersTo = (String) ioElement.getValue();
-                DataSink ds = this.dataSinks.get(refersTo);
-                if (ds == null) {
+                hu.sztaki.ilab.giraffe.schema.process_definitions.Process.Terminals.Output outputDesc = this.outputs.get(refersTo);
+                if (outputDesc == null) {
                     logger.error("Referenced dataSink '" + refersTo + "' not defined in <terminals> section!");
                     return false;
                 }
-                if (!this.processingNetworkGenerator.addDataSink(refersTo, this.terminalMonitorFrequencies.get("output:"+refersTo),process.outputs.get(refersTo).getRecordFormat())) {
+                if (!this.processingNetworkGenerator.addDataSink(refersTo, outputDesc,process.outputs.get(refersTo).getRecordFormat())) {
                     logger.error("Failed to add dataSink " + refersTo + " to processing network.");
                     return false;
                 }

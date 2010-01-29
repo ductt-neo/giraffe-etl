@@ -105,10 +105,10 @@ public class InnerNodeSource implements ProcessingNetworkGenerator.ProcessingNod
 
     // intput and output are lists of (variable name, (field type, field name ))
     public boolean addTask(java.util.List<Pair<String, Pair<String, String>>> input, java.util.List<Pair<String, Pair<String, String>>> output, ObjectInstance call) {
-        MethodCall c = new MethodCall();        
+        MethodCall c = new MethodCall();
         String args = this.assembleInputs(input);
         String callingCode = taskObjects.generateCallingCode(call, args);
-        if (call.getClazz() != null) {            
+        if (call.getClazz() != null) {
             c.instantiatedClass = call.getClazz();
             c.instanceName = "taskObject" + InnerNodeSource.this.tasks.size();
             c.instanceParameters = call.getParameters();
@@ -122,13 +122,13 @@ public class InnerNodeSource implements ProcessingNetworkGenerator.ProcessingNod
                 codeWriter.write("    " + ProcessingNetworkGenerator.standardInstanceNames.get("created") + "." + o.second.second + " = " + c.instanceName + "." + getterName(o.first) + "();\n");
             }
             c.code += codeWriter.toString();
-        } else {            
+        } else {
             if (output.size() != 1) {
                 logger.error("Tasks performing static method calls should return exactly 1 field!");
                 return false;
             }
             c.code += "    " + ProcessingNetworkGenerator.standardInstanceNames.get("created") + "." + output.get(0).second.second + " = " + callingCode + ";\n";
-        }        
+        }
         // Now we must close the try block and catch the exceptions
         tasks.add(c);
         return true;
@@ -138,14 +138,15 @@ public class InnerNodeSource implements ProcessingNetworkGenerator.ProcessingNod
     public String getSource() {
         StringWriter codeWriter = new StringWriter();
         // Write record classes.
+        java.util.Set<ProcessingNetworkGenerator.RecordDefinition> recordClasses = new java.util.HashSet<ProcessingNetworkGenerator.RecordDefinition>();
         for (java.util.Map.Entry<String, ProcessingNetworkGenerator.RecordDefinition> record : this.node.getRecords().entrySet()) {
             if (record.getValue() != null && record.getValue().owner.equals(ProcessingNetworkGenerator.RecordDefinition.RecordDefinitionClassOwner.NODE)) {
-                ProcessingNetworkGenerator.RecordDefinition rec = this.node.getRecords().get(record.getKey());
-                if (null != rec) {
-                    codeWriter.write(rec.generateRecordClass());
-                    codeWriter.write("\n");
-                }
+                recordClasses.add(record.getValue());
             }
+        }
+        for (ProcessingNetworkGenerator.RecordDefinition rec : recordClasses) {
+            codeWriter.write(rec.generateRecordClass());
+            codeWriter.write("\n");
         }
         codeWriter.write("public class " + this.getClassName());
         if (this.getBaseClass() != null) {
