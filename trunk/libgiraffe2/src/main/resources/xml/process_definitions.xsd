@@ -90,6 +90,7 @@
                                     <xsd:element name="datasource" type="df:dataSource" />
                                     <xsd:element name="conversionHint" type="tns:conversionHint" minOccurs="0" maxOccurs="unbounded" />
                                     <xsd:element name="errorRoute" type="tns:errorRoute" minOccurs="0" maxOccurs="unbounded" />
+                                    <xsd:element name="queueSize" type="xsd:positiveInteger" minOccurs="0" />
                                 </xsd:sequence>
                                 <xsd:attribute name="name" type="dt:name" use="required" />
                                 <xsd:attribute name="monitorFrequency" type="xsd:nonNegativeInteger" default="0" />
@@ -101,6 +102,7 @@
                                     <xsd:element name="datasink" type="df:dataSink" minOccurs="0"/>
                                     <xsd:element name="conversionHint" type="tns:conversionHint" minOccurs="0" maxOccurs="unbounded" />
                                     <xsd:element name="errorRoute" type="tns:errorRoute" minOccurs="0" maxOccurs="unbounded" />
+                                    <xsd:element name="queueSize" type="xsd:positiveInteger" minOccurs="0" />
                                 </xsd:sequence>
                                 <xsd:attribute name="name" type="dt:name" use="required" />
                                 <xsd:attribute name="monitorFrequency" type="xsd:nonNegativeInteger" default="0" />

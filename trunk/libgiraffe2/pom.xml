@@ -16,17 +16,6 @@
       <url>https://info.ilab.sztaki.hu/svn/trunk/giraffe2/libgiraffe2</url>
     </scm>
     <build>
-        <resources>
-            <resource>
-                <directory>configuration</directory>
-                <targetPath>META-INF</targetPath>
-            </resource>
-            <resource>
-                <directory>src/main/resources/xml</directory>
-                <targetPath>xml</targetPath>
-            </resource>
-
-        </resources>
         <plugins>
             <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>

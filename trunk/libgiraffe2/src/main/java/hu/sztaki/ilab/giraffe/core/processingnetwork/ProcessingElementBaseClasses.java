@@ -19,7 +19,6 @@ limitations under the License.
  */
 package hu.sztaki.ilab.giraffe.core.processingnetwork;
 
-import hu.sztaki.ilab.giraffe.core.Globals;
 import hu.sztaki.ilab.giraffe.schema.dataprocessing.EventType;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -39,20 +38,23 @@ public class ProcessingElementBaseClasses {
             new hu.sztaki.ilab.giraffe.schema.dataprocessing.EventType[]{hu.sztaki.ilab.giraffe.schema.dataprocessing.EventType.META_OK})));
     protected static org.apache.log4j.Logger logger = org.apache.log4j.Logger.getLogger(DataSource.class);
 
-    public static java.util.Set<hu.sztaki.ilab.giraffe.schema.dataprocessing.EventType> addEvent(java.util.Set<hu.sztaki.ilab.giraffe.schema.dataprocessing.EventType>evSet , hu.sztaki.ilab.giraffe.schema.dataprocessing.EventType ev) {
+    public static java.util.Set<hu.sztaki.ilab.giraffe.schema.dataprocessing.EventType> addEvent(java.util.Set<hu.sztaki.ilab.giraffe.schema.dataprocessing.EventType> evSet, hu.sztaki.ilab.giraffe.schema.dataprocessing.EventType ev) {
+        java.util.Set<hu.sztaki.ilab.giraffe.schema.dataprocessing.EventType> newEvSet = null;
         if (evSet == defaultEvents || evSet == null) {
-            evSet = new java.util.HashSet<hu.sztaki.ilab.giraffe.schema.dataprocessing.EventType>();
-            evSet.add(ev);
+            newEvSet = new java.util.HashSet<hu.sztaki.ilab.giraffe.schema.dataprocessing.EventType>();
+            if (evSet != null) newEvSet.addAll(evSet);
+        } else {
+            newEvSet = evSet;
         }
-        else evSet.add(ev);
-        return evSet;
+        newEvSet.add(ev);
+        return newEvSet;
     }
 
     public static void logException(Record errorRecord) {
-    try {
-            Throwable th = (Throwable)errorRecord.getField(0);
-            String nodeName = ((hu.sztaki.ilab.giraffe.core.processingnetwork.ProcessingElementBaseClasses.Record)errorRecord.getField(3)).getField(0).toString();
-            logger.error("An exception occured in node '"+nodeName+"'.", th);
+        try {
+            Throwable th = (Throwable) errorRecord.getField(0);
+            String nodeName = ((hu.sztaki.ilab.giraffe.core.processingnetwork.ProcessingElementBaseClasses.Record) errorRecord.getField(3)).getField(0).toString();
+            logger.error("An exception occured in node '" + nodeName + "'.", th);
             while (null != (th = th.getCause())) {
                 logger.error("caused by ", th);
             }
@@ -120,8 +122,6 @@ public class ProcessingElementBaseClasses {
     // (the later covering embedded processing networks, living within a processingnode of another network).
     public abstract static class DataSource<ReceivedRecordType extends Record, CreatedRecordType extends Record> extends ProcessingNetworkNode {
 
-        protected int timeout = Globals.queueWaitTimeoutSeconds;
-
         // addRecord is the function called from outside the network to add a new record to this data source.
         public abstract boolean addRecord(ReceivedRecordType record);
 
@@ -132,16 +132,19 @@ public class ProcessingElementBaseClasses {
 
         protected AtomicBoolean keepRunning = new AtomicBoolean(true);
         protected java.util.concurrent.CountDownLatch latch = null;
-        protected java.util.concurrent.BlockingQueue<ReceivedRecordType> queue = new java.util.concurrent.ArrayBlockingQueue<ReceivedRecordType>(hu.sztaki.ilab.giraffe.core.Globals.queueSize);
+        protected java.util.concurrent.BlockingQueue<ReceivedRecordType> queue;
         protected ReceivedRecordType receivedRecord;
         protected CreatedRecordType createdRecord;
+        protected int timeout;
 
         public void requestStop() {
             keepRunning.set(false);
         }
 
-        public ThreadedDataSource(java.util.concurrent.CountDownLatch latch) {
+        public ThreadedDataSource(java.util.concurrent.CountDownLatch latch, int queueSize, int timeout) {
             this.latch = latch;
+            this.timeout = timeout;
+            this.queue = new java.util.concurrent.ArrayBlockingQueue<ReceivedRecordType>(queueSize);
         }
 
         public boolean addRecord(ReceivedRecordType record) {
@@ -158,7 +161,7 @@ public class ProcessingElementBaseClasses {
                         // the run() function will never run concurrently.
                         events = defaultEvents;
                         createdRecord = importConversion(receivedRecord);
-                        send();                        
+                        send();
                     }
                 } catch (Exception ex) {
                     logger.error("Unhandled exception occured: ", ex);
@@ -211,9 +214,10 @@ public class ProcessingElementBaseClasses {
     public abstract static class ThreadedDataSink<ReceivedRecordType extends Record, CreatedRecordType extends Record> extends DataSink<ReceivedRecordType, CreatedRecordType> {
 
         // outputQ is the queue of exported records, which is read by an exporter running in a separate thread.
-        protected java.util.concurrent.BlockingQueue<CreatedRecordType> queue = new java.util.concurrent.ArrayBlockingQueue<CreatedRecordType>(hu.sztaki.ilab.giraffe.core.Globals.queueSize);
+        protected java.util.concurrent.BlockingQueue<CreatedRecordType> queue;
 
-        public ThreadedDataSink() {
+        public ThreadedDataSink(int queueSize) {
+            queue = new java.util.concurrent.ArrayBlockingQueue<CreatedRecordType>(queueSize);
         }
 
         // Override this to route errorRecord to another data sink.
@@ -246,5 +250,59 @@ public class ProcessingElementBaseClasses {
     // Virtual data sinks are useful if a processing network is embedded within a processing node.
     // No conversion is necessary.
     public abstract static class VirtualDataSink<RecordType extends Record> extends DataSink<RecordType, RecordType> {
+    }
+
+    // An AsyncPipe object is simultaneously a data source and a data sink. As a result, it is executed simultaneously in
+    // (at least) 2 threads: The data sink thread(s) place new records in the queue by calling receive(),
+    // while the data source thread reads from the queue and forwards it to the destination node(s).
+    public abstract static class AsyncPipe<RecordType extends Record> extends ProcessingNetworkNode implements Runnable, Stoppable {
+
+        protected AtomicBoolean keepRunning = new AtomicBoolean(true);
+        protected java.util.concurrent.CountDownLatch latch = null;
+        protected java.util.concurrent.BlockingQueue<RecordType> queue;
+        protected int timeout;
+        protected RecordType receivedRecord = null;
+        protected RecordType createdRecord = null;
+
+        public void requestStop() {
+            keepRunning.set(false);
+        }
+
+        public AsyncPipe(java.util.concurrent.CountDownLatch latch, int queueSize, int timeout) {
+            this.latch = latch;
+            this.timeout = timeout;
+            this.queue = new java.util.concurrent.ArrayBlockingQueue<RecordType>(queueSize);
+        }
+
+        public void run() {
+            while (keepRunning.get()) {
+                try {                    
+                    // Wait $timeout for next record to arrive if none is available.
+                    if (null != (createdRecord = queue.poll(timeout, TimeUnit.SECONDS))) {
+                        // Note that no data source (not even ThreadedDataSource) has to be
+                        // thread-safe, as each data source runs in its own thread, so
+                        // the run() function will never run concurrently.
+                        events = defaultEvents;
+                        send();
+                    }
+                } catch (Exception ex) {
+                    logger.error("Unhandled exception occured: ", ex);
+                }
+            }
+            this.latch.countDown();
+        }
+
+        public void receive(RecordType rec) {
+            try {
+            invokeProcessMonitor();
+            queue.put(rec);
+            } catch (InterruptedException e) {
+                // What should I do with this?
+                throw new RuntimeException (e);
+            }
+        }
+        // send is dynamically generated.
+        protected abstract void send();
+        protected abstract void invokeProcessMonitor();
     }
 }

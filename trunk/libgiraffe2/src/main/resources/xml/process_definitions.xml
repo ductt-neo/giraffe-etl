@@ -72,7 +72,7 @@ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" >
                 </datasource>
                 <conversionHint field="hit_timestamp">
                     <name>string2date</name>
-                    <parameters format="dd/MMM/yyyy:HH:mm:ss ZZZZZ" />                    
+                    <parameters format="dd/MMM/yyyy:HH:mm:ss ZZZZZ" />
                 </conversionHint>
                 <conversionHint field="http_status">
                     <name>string2int</name>
@@ -87,7 +87,7 @@ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" >
             <output name="fact">
                 <conversionHint field="hit_timestamp">
                     <name>date2string</name>
-                    <parameters format="dd/MMM/yyyy:HH:mm:ss ZZZZZ" />
+                    <parameters format="yyyy.MM.dd HH:mm:ss (ZZZZZ)" />
                 </conversionHint>
                 <errorRoute>
                     <destination>conversion_errors</destination>
@@ -96,6 +96,7 @@ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" >
             </output>
             <output name="error_discard" />
             <output name="no_destination_discard" />
+            <output name="resolved_ip_addresses"/>
             <!--<output name="conversion_errors" />-->
         </terminals>
         <network>
@@ -104,6 +105,8 @@ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" >
                 <dp:outputRef>fact</dp:outputRef>
                 <dp:outputRef>error_discard</dp:outputRef>
                 <dp:outputRef>no_destination_discard</dp:outputRef>
+                <dp:outputRef>resolved_ip_addresses</dp:outputRef>
+                <dp:asyncPipe name="rdns" monitorFrequency="1"/>
             </dp:io>
             <dp:node name="block0" monitorFrequency="0">
                 <dp:receivedFields>
@@ -171,6 +174,25 @@ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" >
                     </dp:call>
                 </dp:tasks>
             </dp:node>
+            <dp:node name="block2" monitorFrequency="0">
+                <dp:receivedFields>
+                    <df:column name="client_ip" javaType="java.lang.String" />
+                </dp:receivedFields>
+                <dp:createdFields>
+                    <df:column name="resolved_hostname" javaType="java.lang.String" />
+                </dp:createdFields>
+                <dp:tasks>
+                    <dp:call>
+                        <dt:class>hu.sztaki.ilab.giraffe.core.util.TestClasses$RDNSResolver</dt:class>                        
+                        <!--Default method name is runTask, so it may be omitted.
+                        <dt:method>runTask</dt:method>-->
+                        <dt:input field="client_ip" />
+                        <dt:output variable="hostName" field="resolved_hostname" />
+                        <dt:parameters nameservers="192.168.0.1, 192.168.0.3" />
+                    </dp:call>
+                </dp:tasks>
+            </dp:node>
+            <!-- main process routes: if all goes well, the rows travel through these routes. -->
             <dp:route>
                 <dp:source>logfile</dp:source>
                 <dp:destination>block0</dp:destination>
@@ -185,30 +207,46 @@ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" >
                 <dp:destination>fact</dp:destination>
                 <dp:mapExpression expression="* = received:, * = created:" />
             </dp:route>
+            <!-- routes for r-DNS thread -->
+            <dp:route>
+                <dp:source>block1</dp:source>
+                <dp:destination>rdns</dp:destination>
+                <dp:mapField source="client_ip" destination="client_ip" />
+            </dp:route>
+            <dp:route>
+                <dp:source>rdns</dp:source>
+                <dp:destination>block2</dp:destination>
+            </dp:route>
+            <dp:route>
+                <dp:source>block2</dp:source>
+                <dp:destination>resolved_ip_addresses</dp:destination>
+                <dp:mapField source="received:client_ip" destination="client_ip" />
+                <dp:mapField source="created:resolved_hostname" destination="host" />
+            </dp:route>
             <!-- error handling routes -->
             <dp:route>
                 <dp:source>@nodes</dp:source>
                 <dp:destination>error_discard</dp:destination>
-                <dp:mapExpression expression="* - ex = error:"/>
+                <dp:mapExpression expression="* = error:"/>
                 <dp:condition>
                     <dt:and>
                         <dt:not>
-                        <dt:predicate>
-                            <dp:eventType>routing:record-has-been-delivered</dp:eventType>
-                        </dt:predicate>
+                            <dt:predicate>
+                                <dp:eventType>routing:record-has-been-delivered</dp:eventType>
+                            </dt:predicate>
                         </dt:not>
-                    <dt:not>
-                        <dt:predicate>
-                            <dp:eventType>meta:ok</dp:eventType>
-                        </dt:predicate>
-                    </dt:not>
+                        <dt:not>
+                            <dt:predicate>
+                                <dp:eventType>meta:ok</dp:eventType>
+                            </dt:predicate>
+                        </dt:not>
                     </dt:and>
                     
                 </dp:condition>
             </dp:route>
             <!-- no destination discards -->
             <dp:route>
-                <dp:source>@all - no_destination_discard</dp:source>
+                <dp:source>@all - (no_destination_discard + error_discard) </dp:source>
                 <dp:destination>no_destination_discard</dp:destination>
                 <dp:mapExpression expression="received = ProcessingElementBaseClasses.Record {receivedRecord}, created = ProcessingElementBaseClasses.Record {createdRecord}"/>
                 <dp:condition>

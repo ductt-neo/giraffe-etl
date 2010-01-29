@@ -385,7 +385,9 @@ public class ProcessingNetworkGenerator {
         // The most important properties of a processing network node are:
         // The name of the node.
 
-        ProcessingNetworkGenerator getGenerator() {return ProcessingNetworkGenerator.this;}
+        ProcessingNetworkGenerator getGenerator() {
+            return ProcessingNetworkGenerator.this;
+        }
         protected String nodeName;
         // The source code of the classes which contain data and perform functions for the node.
         protected ProcessingNodeSource src;
@@ -489,10 +491,11 @@ public class ProcessingNetworkGenerator {
         // which are stored in receivedFieldDefinition.
 
         RecordDefinition receivedFieldDefinition;
+        int queueSize = ProcessingNetworkGenerator.this.defaults.getTerminals().getDefaultQueueSize().intValue();
 
         class SourceCode extends InnerNodeSource {
 
-            ObjectInstantiator conversionObjectInstantiator = new ObjectInstantiator("conv_"+DataSourceNode.this.getName()+"_");
+            ObjectInstantiator conversionObjectInstantiator = new ObjectInstantiator("conv_" + DataSourceNode.this.getName() + "_");
 
             public SourceCode() {
                 super(DataSourceNode.this, ProcessingNetworkGenerator.this.networkName);
@@ -504,7 +507,7 @@ public class ProcessingNetworkGenerator {
                 writeImportConversion(codeWriter);
                 // constructor
                 codeWriter.write("  public " + this.getClassName() + "(java.util.concurrent.CountDownLatch latch, hu.sztaki.ilab.giraffe.core.factories.ObjectInstantiator convObjects) {\n");
-                codeWriter.write("    super(latch);\n");
+                codeWriter.write("    super(latch, " + DataSourceNode.this.queueSize + "," + defaults.getTerminals().getQueueWaitTimeout() + ");\n");
                 codeWriter.write("    " + ProcessingNetworkGenerator.this.networkName + ".this.process.inputs.get(\"" + DataSourceNode.this.getName() + "\").setQueueWriter(this);\n");
                 codeWriter.write(conversionObjectInstantiator.generateGetInstancesCode("convObjects"));
                 codeWriter.write("  }\n");
@@ -559,7 +562,7 @@ public class ProcessingNetworkGenerator {
                 codeWriter.write("    this.events = ProcessingElementBaseClasses.addEvent(this.events, EventType.ERROR_CONVERSION_FAILED);\n");
                 codeWriter.write("    updateErrorRecord(ex);\n");
                 if (node.getGenerator().process.monitor != null) {
-                    codeWriter.write("    "+this.networkName+".this.process.monitor.onError("+ProcessingNetworkGenerator.standardInstanceNames.get("error")+");\n");
+                    codeWriter.write("    " + this.networkName + ".this.process.monitor.onError(" + ProcessingNetworkGenerator.standardInstanceNames.get("error") + ");\n");
                 }
                 codeWriter.write("    return new " + DataSourceNode.this.records.get("created").className + "();\n");
                 codeWriter.write("  }\n");
@@ -581,9 +584,12 @@ public class ProcessingNetworkGenerator {
             }
         }
 
-        public DataSourceNode(String nodeName, int monitorFrequency, RecordDefinition receivedFieldDefinition) {
-            super(nodeName, monitorFrequency);
-            this.receivedFieldDefinition = receivedFieldDefinition;
+        public DataSourceNode(String nodeName, hu.sztaki.ilab.giraffe.schema.process_definitions.Process.Terminals.Input inputDesc, RecordDefinition recordDef) {
+            super(nodeName, inputDesc.getMonitorFrequency().intValue());
+            if (inputDesc.getQueueSize() != null) {
+                this.queueSize = inputDesc.getQueueSize().intValue();
+            }
+            this.receivedFieldDefinition = recordDef;
         }
 
         public boolean isDataSource() {
@@ -611,10 +617,11 @@ public class ProcessingNetworkGenerator {
         // which are stored in createdFieldDefinition.
 
         RecordDefinition createdFieldDefinition;
+        int queueSize = ProcessingNetworkGenerator.this.defaults.getTerminals().getDefaultQueueSize().intValue();
 
         class SourceCode extends InnerNodeSource {
 
-            ObjectInstantiator conversionObjectInstantiator = new ObjectInstantiator("conv_"+DataSinkNode.this.getName()+"_");
+            ObjectInstantiator conversionObjectInstantiator = new ObjectInstantiator("conv_" + DataSinkNode.this.getName() + "_");
 
             public SourceCode() {
                 super(DataSinkNode.this, ProcessingNetworkGenerator.this.networkName);
@@ -663,6 +670,7 @@ public class ProcessingNetworkGenerator {
                 writeExportConversion(codeWriter);
                 // constructor
                 codeWriter.write("  public " + this.getClassName() + "(hu.sztaki.ilab.giraffe.core.factories.ObjectInstantiator convObjects) {\n");
+                codeWriter.write("    super(" + DataSinkNode.this.queueSize + ");\n");
                 codeWriter.write("    " + ProcessingNetworkGenerator.this.networkName + ".this.process.outputs.get(\"" + DataSinkNode.this.getName() + "\").setQueue(this.queue);\n");
                 codeWriter.write(conversionObjectInstantiator.generateGetInstancesCode("convObjects"));
                 codeWriter.write("  }\n");
@@ -683,8 +691,11 @@ public class ProcessingNetworkGenerator {
             }
         }
 
-        public DataSinkNode(String nodeName, int monitorFrequency, RecordDefinition createdFieldDefinition) {
-            super(nodeName, monitorFrequency);
+        public DataSinkNode(String nodeName, hu.sztaki.ilab.giraffe.schema.process_definitions.Process.Terminals.Output outputDesc, RecordDefinition createdFieldDefinition) {
+            super(nodeName, outputDesc.getMonitorFrequency().intValue());
+            if (outputDesc.getQueueSize() != null) {
+                this.queueSize = outputDesc.getQueueSize().intValue();
+            }
             this.createdFieldDefinition = createdFieldDefinition;
         }
 
@@ -705,6 +716,8 @@ public class ProcessingNetworkGenerator {
     // an AsyncPipeNode represents both the sink & source belonging to an async pipe.
     class AsyncPipeNode extends ProcessingNetworkNode {
 
+        int queueSize = ProcessingNetworkGenerator.this.defaults.getTerminals().getDefaultQueueSize().intValue();
+
         class SourceCode extends InnerNodeSource {
 
             public SourceCode() {
@@ -713,6 +726,36 @@ public class ProcessingNetworkGenerator {
 
             @Override
             public void writeClassBody(StringWriter codeWriter) {
+                // constructor
+                codeWriter.write("  public " + this.getClassName() + "(java.util.concurrent.CountDownLatch latch) {\n");
+                codeWriter.write("    super(latch, " + AsyncPipeNode.this.queueSize + ", " + defaults.getTerminals().getQueueWaitTimeout().intValue() + ");\n");
+                codeWriter.write("  }\n");
+                // send() stub
+                // write class conversion fields (if any).
+                codeWriter.write(this.generateSendFunctions());
+                // write the invoke process monitor function:
+                codeWriter.write("  protected void invokeProcessMonitor() {\n");
+                if (AsyncPipeNode.this.monitorFrequency > 0 && ProcessingNetworkGenerator.this.process.monitor != null) {
+                    codeWriter.write("  this.recordsRead++;\n");
+                    codeWriter.write("  if ((this.recordsRead % " + AsyncPipeNode.this.monitorFrequency + ") == 0) " + this.networkName + ".this.process.monitor.onNodeEntry(\"" + this.node.getName() + "\",this.recordsRead);\n");
+                }
+                codeWriter.write("  }\n");
+            }
+
+            void writeClassFields(StringWriter codeWriter) {
+                // write class fields
+                codeWriter.write("  // Class fields\n");
+                codeWriter.write(generateNodeData());
+                for (java.util.Map.Entry<String, ProcessingNetworkGenerator.RecordDefinition> fieldType : this.node.getRecords().entrySet()) {
+                    if (fieldType.getKey().equals("nodedata") ||
+                        fieldType.getKey().equals("created")  ||
+                        fieldType.getKey().equals("received") ) {
+                        continue; // nodedata is a special case.
+                        }
+                    if (fieldType.getValue() != null) {
+                        codeWriter.write("  " + fieldType.getValue().className + " " + ProcessingNetworkGenerator.standardInstanceNames.get(fieldType.getKey()) + " = null;\n");
+                    }
+                }
             }
 
             @Override
@@ -720,10 +763,17 @@ public class ProcessingNetworkGenerator {
                 String type = "<" + AsyncPipeNode.this.records.get("received").className + ">";
                 return "ProcessingElementBaseClasses.AsyncPipe" + type;
             }
+
+            public String instantiate() {
+                return " new " + getClassName() + "(this.process.dataSourcesThreadsLatch)";
+            }
         }
 
-        public AsyncPipeNode(String nodeName, int monitorFrequency) {
-            super(nodeName, monitorFrequency);
+        public AsyncPipeNode(hu.sztaki.ilab.giraffe.schema.dataprocessing.ProcessingNetwork.Io.AsyncPipe pipeDesc) {
+            super(pipeDesc.getName(), pipeDesc.getMonitorFrequency().intValue());
+            if (pipeDesc.getQueueSize() != null) {
+                this.queueSize = pipeDesc.getQueueSize().intValue();
+            }
         }
 
         public boolean isDataSink() {
@@ -740,7 +790,7 @@ public class ProcessingNetworkGenerator {
         }
 
         protected void initIORecords() {
-            RecordDefinition singleRecordType = new RecordDefinition(); // both created and received have this same format.
+            RecordDefinition singleRecordType = new RecordDefinition("Record_" + this.getName()); // both created and received have this same format.
             this.records.put("received", singleRecordType);
             this.records.put("created", singleRecordType);
         }
@@ -754,23 +804,24 @@ public class ProcessingNetworkGenerator {
         this.process = process;
     }
 
-    public boolean addDataSource(String name, int monitorFrequency, RecordDefinition ReceivedRecord) {
-        ProcessingNetworkNode dsNode = new DataSourceNode(name, monitorFrequency, ReceivedRecord);
+    public boolean addDataSource(String name, hu.sztaki.ilab.giraffe.schema.process_definitions.Process.Terminals.Input inputDesc, RecordDefinition dsDefinition) {
+        ProcessingNetworkNode dsNode = new DataSourceNode(name, inputDesc, dsDefinition);
         dsNode.init();
         nodes.put(name, dsNode);
         return true;
     }
 
-    public boolean addDataSink(String name, int monitorFrequency, RecordDefinition dsDefinition) {
+    public boolean addDataSink(String name, hu.sztaki.ilab.giraffe.schema.process_definitions.Process.Terminals.Output outputDesc, RecordDefinition dsDefinition) {
         // --- create associated processing node ---
-        ProcessingNetworkNode dsNode = new DataSinkNode(name, monitorFrequency, dsDefinition);
+        ProcessingNetworkNode dsNode = new DataSinkNode(name, outputDesc, dsDefinition);
         dsNode.init();
         nodes.put(name, dsNode);
         return true;
     }
 
     public boolean addAsyncPipe(hu.sztaki.ilab.giraffe.schema.dataprocessing.ProcessingNetwork.Io.AsyncPipe pipe) {
-        ProcessingNetworkNode node = new AsyncPipeNode(pipe.getName(), pipe.getMonitorFrequency().intValue());
+        ProcessingNetworkNode node = new AsyncPipeNode(pipe);
+        node.init();
         nodes.put(pipe.getName(), node);
         return true;
     }
@@ -964,11 +1015,11 @@ public class ProcessingNetworkGenerator {
      *  For real (threaded) data sources, the names of the fields are known, as they are specified in <column name="$name"> format if the input
      *  is a stream, or the column name is available from SQL if it is a JDBC data source. Their type, however is not known. In the case of
      *  streams, every field "starts life" as a String, but a conversion may convert them to any other type. JDBC fields have a type, but they
-     *  to may be converted into any type expected if the necessary conversion function is defined.
+     *  too may be converted into any type expected if the necessary conversion function is defined.
      *  Virtual data sources have identical created and received fields, thus the first connection to the virtual data source defines its record
      *  format.
      * - Data sinks:
-     *  Read (threaded) data sinks must convert incoming records into Object[] arrays (where the actual members of the array may be a strings
+     *  Real (threaded) data sinks must convert incoming records into the types expected by the recordExporter (it may be a string
      *  if output is sent to a stream, or some other datatype of output is sent to a JDBC resource). A data sink doesn't have to know the name
      *  of the output fields, only their order and type (in both stream and JDBC cases). As a result real data sinks must have an explicit mapping
      *  which determines which fields of the source node are passed on to the data sink.
@@ -1002,6 +1053,7 @@ public class ProcessingNetworkGenerator {
         logger.debug("Mapping fields for route " + source.getName() + " to " + destination.getName());
         boolean destinationReceivedRecordDefined = true;
         // the record formats of the source and destination nodes must be defined for field mapping to work.
+        // If either the source or the destination of a
         if (source.records.get("created").record.isEmpty()) {
             if (!deduceDataSourceCreatedRecordFormat(source, destination)) {
                 return null;
@@ -1009,7 +1061,7 @@ public class ProcessingNetworkGenerator {
         }
         if (destination.records.get("received").record.isEmpty()) {
             // if this is the data sink portion of a pipe, then the received record = created record, which is determined by the nodes adjacent to the data sink of the pipe.
-            if (destination.isDataSink() && destination.isDataSource()) {
+            if (false/*destination.isDataSink() && destination.isDataSource()*/) {
                 if (destination.outgoingRoutes.isEmpty() || !deduceDataSourceCreatedRecordFormat(destination, destination.outgoingRoutes.get(0).destination)) {
                     logger.error("Error deducing the received record type of async data pipe '" + destination.getName() + "'. This must be the same as the created record type of the associated data source, but either the source is not connectd to any other node or the created record format of the source could not be deduced.");
                     return null;

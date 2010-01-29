@@ -41,7 +41,7 @@ public class Record{
     public boolean readJdbcRecord(java.sql.ResultSet rset) {return false;}
 
 
-    static java.text.DateFormat dateFormat = new java.text.SimpleDateFormat(hu.sztaki.ilab.giraffe.core.Globals.standardDateFormat);
+    public static java.text.DateFormat dateFormat = null;
 
     public static class PDFormat {
         public String columnSeparator;
