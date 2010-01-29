@@ -15,24 +15,30 @@
    xmlns:df="http://info.ilab.sztaki.hu/giraffe/schema/dataformat"
    xmlns:dp="http://info.ilab.sztaki.hu/giraffe/schema/dataprocessing">
     <events>
-        <defaultEventCondition>            
-                    <dt:predicate>
-                        <dp:eventType>meta:ok</dp:eventType>
-                    </dt:predicate>
+        <defaultEventCondition>
+            <dt:predicate>
+                <dp:eventType>meta:ok</dp:eventType>
+            </dt:predicate>
         </defaultEventCondition>
     </events>
     <dataFormats>
-      <defaultDataSink>
-        <df:format>
-         <df:streamFormat>
-           <df:encoding>UTF-8</df:encoding>
-           <!-- this is the XML version of '\n' -->
-           <df:newline>&#xA;</df:newline>
-           <df:separator>|</df:separator>
-           <df:escape>\</df:escape>
-           <df:fields/><!-- fields are not known at this point -->
-         </df:streamFormat>
-        </df:format>
-      </defaultDataSink>
+        <defaultDataSink>
+            <df:format>
+                <df:streamFormat>
+                    <df:encoding>UTF-8</df:encoding>
+                    <!-- this is the XML version of '\n' -->
+                    <df:newline>&#xA;</df:newline>
+                    <df:separator>|</df:separator>
+                    <df:escape>\</df:escape>
+                    <df:fields/><!-- fields are not known at this point -->
+                </df:streamFormat>
+            </df:format>
+        </defaultDataSink>
+        <defaultDateFormat>yyyy.MM.dd HH:mm:ss</defaultDateFormat>
     </dataFormats>
+    <terminals>
+        <defaultQueueSize>5000</defaultQueueSize>
+        <!-- timeout is measured in seconds -->
+        <queueWaitTimeout>10</queueWaitTimeout>
+    </terminals>
 </defaults>

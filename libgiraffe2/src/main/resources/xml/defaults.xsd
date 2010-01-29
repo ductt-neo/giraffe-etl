@@ -43,6 +43,16 @@
             <xsd:complexType>
                 <xsd:sequence>
                     <xsd:element name="defaultDataSink" type="df:dataSink" />
+                    <xsd:element name="defaultDateFormat" type="xsd:string" />
+                </xsd:sequence>
+            </xsd:complexType>
+        </xsd:element>
+        <xsd:element name="terminals">
+            <xsd:complexType>
+                <xsd:sequence>
+                    <xsd:element name="defaultQueueSize" type="xsd:positiveInteger" />
+                    <!-- in seconds -->
+                    <xsd:element name="queueWaitTimeout" type="xsd:positiveInteger" />
                 </xsd:sequence>
             </xsd:complexType>
         </xsd:element>
