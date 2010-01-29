@@ -20,6 +20,8 @@
 
 package hu.sztaki.ilab.giraffe.core.util;
 
+import hu.sztaki.ilab.giraffe.schema.datatypes.Parameters;
+
 /**
  * THIS FILE WILL BE DELETED.
  * This file will exist as long as giraffe2-dataprocessors does not compile.
@@ -38,6 +40,21 @@ public class TestClasses {
       String ua,loc;
       public boolean deriveLanguage(String ua, String loc) {this.ua = ua; this.loc = loc; return true;}
       public String getLanguage() {return "hu";}
+  }
+
+  public static class RDNSResolver{
+      Parameters param;
+      String ipAddr;
+      public RDNSResolver(Parameters param) {
+          this.param = param;
+      }
+      public boolean init() {return true;}
+      public boolean runTask(String ipAddr) {
+          this.ipAddr = ipAddr;
+          return true;
+      }
+      public String getHostName() {return "pool."+ipAddr+".telekom.hu";}
+
   }
 
   public static String fn1(String ip) {return "Resolved hostname for "+ip;}
