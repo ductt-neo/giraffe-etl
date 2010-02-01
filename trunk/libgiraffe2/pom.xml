@@ -142,11 +142,12 @@
             <artifactId>jmx</artifactId>
             <version>4.0.72</version>
         </dependency>-->
+        <!--
         <dependency>
             <groupId>com.oracle</groupId>
             <artifactId>ojdbc6</artifactId>
             <version>11.1.0</version>
-        </dependency>
+        </dependency> -->
         <dependency>
             <groupId>xerces</groupId>
             <artifactId>xercesImpl</artifactId>
