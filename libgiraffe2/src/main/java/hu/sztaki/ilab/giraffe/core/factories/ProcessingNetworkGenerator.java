@@ -959,7 +959,9 @@ public class ProcessingNetworkGenerator {
         return null;
     }
 
-    boolean interpretMapping(ProcessingNetworkNode source, ProcessingNetworkNode destination, hu.sztaki.ilab.giraffe.schema.dataprocessing.RecordRoute.MapField mf, RecordMapping currentMappings, boolean destinationReceivedRecordDefined) {
+    boolean interpretMapping(ProcessingNetworkNode source, ProcessingNetworkNode destination, 
+            hu.sztaki.ilab.giraffe.schema.process_definitions.ErrorRoute.MapField mf,
+            RecordMapping currentMappings, boolean destinationReceivedRecordDefined) {
         // describes the field in the destination node's received record which is defined by this mapping.
         Pair<String, String> currentDestinationField = null;
         // describes the source field which is copied to the destination field.
@@ -993,7 +995,8 @@ public class ProcessingNetworkGenerator {
         return true;
     }
 
-    boolean interpretMapping(ProcessingNetworkNode source, ProcessingNetworkNode destination, hu.sztaki.ilab.giraffe.schema.dataprocessing.RecordRoute.MapExpression me, RecordMapping currentMappings, boolean destinationReceivedRecordDefined) {
+    boolean interpretMapping(ProcessingNetworkNode source, ProcessingNetworkNode destination, 
+            hu.sztaki.ilab.giraffe.schema.process_definitions.ErrorRoute.MapExpression me, RecordMapping currentMappings, boolean destinationReceivedRecordDefined) {
         // This version of interpretMapping works with mapping expressions.
         return ExpressionParsers.parseMappingExpression(me.getExpression(), source.getRecords(), destination.getRecords().get("received"), currentMappings, destinationReceivedRecordDefined);
     }
@@ -1083,13 +1086,13 @@ public class ProcessingNetworkGenerator {
          */
         for (Object o : mappings) {
             try {
-                hu.sztaki.ilab.giraffe.schema.dataprocessing.RecordRoute.MapField mf = (hu.sztaki.ilab.giraffe.schema.dataprocessing.RecordRoute.MapField) o;
+                hu.sztaki.ilab.giraffe.schema.process_definitions.ErrorRoute.MapField mf = (hu.sztaki.ilab.giraffe.schema.process_definitions.ErrorRoute.MapField) o;
                 if (!interpretMapping(source, destination, mf, m, destinationReceivedRecordDefined)) {
                     return null;
                 }
             } catch (ClassCastException ex1) {
                 try {
-                    hu.sztaki.ilab.giraffe.schema.dataprocessing.RecordRoute.MapExpression me = (hu.sztaki.ilab.giraffe.schema.dataprocessing.RecordRoute.MapExpression) o;
+                    hu.sztaki.ilab.giraffe.schema.process_definitions.ErrorRoute.MapExpression me = (hu.sztaki.ilab.giraffe.schema.process_definitions.ErrorRoute.MapExpression) o;
                     if (!interpretMapping(source, destination, me, m, destinationReceivedRecordDefined)) {
                         return null;
                     }
