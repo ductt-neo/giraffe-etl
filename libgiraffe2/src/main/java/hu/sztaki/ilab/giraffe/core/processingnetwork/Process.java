@@ -77,11 +77,13 @@ public class Process {
             }
             // If reading the input has finished, then we may ask the data source threads to stop.
             Process.this.network.dataSourcesRequestStop();
+                    // modras: Data source threads won't stop until they process all their queues.
 
             // Now wait for the data source threads to finish their work.
             try {
                 Process.this.dataSourcesThreadsLatch.await();
                 recordExportersRequestStop();
+                    // modras: Record exporter threads won't stop until they process all their queues.
                 Process.this.recordExporterThreadsLatch.await();
             } catch (InterruptedException ex) {
                 logger.debug("Process interrupted.", ex);

@@ -18,7 +18,7 @@ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" >
     <process name="test">
         <terminals>
             <!-- The input of this process will be file(s).  -->
-            <input name="logfile" monitorFrequency="0">
+            <input name="logfile" monitorFrequency="1">
                 <datasource>
                     <df:format>
                         <df:streamFormat>
@@ -259,4 +259,264 @@ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" >
             </dp:route>
         </network>
     </process>
+
+    <process name="test2">
+        <terminals>
+            <!-- The input of this process will be file(s).  -->
+            <input name="logfile" monitorFrequency="0">
+                <datasource>
+                    <df:format>
+                        <df:streamFormat>
+                            <df:encoding>utf-8</df:encoding>
+                            <df:newline>&#xA;</df:newline>
+                            <df:separator>,</df:separator>
+                            <df:escape>\</df:escape>
+                            <df:fields>
+                                <df:column name="aa" />
+                                <df:column name="bb" />
+                            </df:fields>
+                            <df:defaultQuotes>
+                              <df:quotes>&quot;</df:quotes>
+                            </df:defaultQuotes>
+                            <df:columnFormatting>
+                                <df:column columnRef="aa">
+                                    <df:quotes>
+                                        <df:start>[</df:start>
+                                        <df:end>]</df:end>
+                                    </df:quotes>
+                                </df:column>
+                                <df:column columnRef="bb">
+                                    <df:quotes>
+                                        <df:quotes>&quot;</df:quotes>
+                                    </df:quotes>
+                                </df:column>
+                            </df:columnFormatting>
+                        </df:streamFormat>
+                    </df:format>
+                </datasource>
+                <conversionHint field="aa">
+                    <name>string2int</name>
+                    <parameters default="0" />
+                </conversionHint>
+            </input>
+            <!-- Use default formats for output files. -->
+            <output name="fact">
+                <conversionHint field="aa">
+                    <name>int2string</name>
+                </conversionHint>
+            </output>
+            <output name="fact2">
+                <conversionHint field="aa">
+                    <name>int2string</name>
+                </conversionHint>
+            </output>
+            <output name="error_discard" />
+       </terminals>
+        <network>
+            <dp:io>
+                <dp:inputRef>logfile</dp:inputRef>
+                <dp:outputRef>fact</dp:outputRef>
+                <dp:outputRef>fact2</dp:outputRef>
+                <dp:outputRef>error_discard</dp:outputRef>
+           </dp:io>
+            <dp:node name="block0" monitorFrequency="1">
+                <dp:receivedFields>
+                    <df:column name="aa" javaType="java.lang.Integer" />
+                    <df:column name="bb" javaType="java.lang.String" />
+                </dp:receivedFields>
+                <dp:createdFields>
+                    <df:column name="cc" javaType="java.lang.String" />
+                </dp:createdFields>
+                <dp:tasks>
+                    <dp:call> <!-- Gets user and session ID out of HTTP cookies. -->
+                        <dt:class>hu.sztaki.ilab.giraffe.core.util.TestClasses$SomeClass</dt:class>
+                        <dt:input field="bb" />
+                        <dt:output variable="apache_id" field="cc" />
+                    </dp:call>
+                </dp:tasks>
+            </dp:node>
+            <dp:node name="block1" monitorFrequency="1">
+                <dp:receivedFields>
+                    <df:column name="aa" javaType="java.lang.Integer" />
+                    <df:column name="bb" javaType="java.lang.String" />
+                    <df:column name="cc" javaType="java.lang.String" />
+                </dp:receivedFields>
+                <dp:createdFields>
+                    <df:column name="dd" javaType="java.lang.String" />
+                </dp:createdFields>
+                <dp:tasks>
+                    <dp:call> <!-- Gets user and session ID out of HTTP cookies. -->
+                        <dt:class>hu.sztaki.ilab.giraffe.core.util.TestClasses$SomeClass</dt:class>
+                        <dt:input field="cc" />
+                        <dt:output variable="apache_id" field="dd" />
+                    </dp:call>
+                </dp:tasks>
+            </dp:node>
+            <dp:node name="block2" monitorFrequency="1">
+                <dp:receivedFields>
+                    <df:column name="aa" javaType="java.lang.Integer" />
+                    <df:column name="bb" javaType="java.lang.String" />
+                    <df:column name="cc" javaType="java.lang.String" />
+                </dp:receivedFields>
+                <dp:createdFields>
+                    <df:column name="ee" javaType="java.lang.String" />
+                </dp:createdFields>
+                <dp:tasks>
+                    <dp:call> <!-- Gets user and session ID out of HTTP cookies. -->
+                        <dt:class>hu.sztaki.ilab.giraffe.core.util.TestClasses$SomeClass</dt:class>
+                        <dt:input field="bb" />
+                        <dt:output variable="apache_id" field="ee" />
+                    </dp:call>
+                </dp:tasks>
+            </dp:node>
+            <!-- main process routes: if all goes well, the rows travel through these routes. -->
+            <dp:route>
+                <dp:source>logfile</dp:source>
+                <dp:destination>block0</dp:destination>
+            </dp:route>
+            <dp:route>
+                <dp:source>block0</dp:source>
+                <dp:destination>block1</dp:destination>
+            </dp:route>
+            <dp:route>
+                <dp:source>block1</dp:source>
+                <dp:destination>fact</dp:destination>
+                <dp:mapExpression expression="* = received:, * = created:" />
+            </dp:route>
+            <dp:route>
+                <dp:source>block0</dp:source>
+                <dp:destination>block2</dp:destination>
+            </dp:route>
+            <dp:route>
+                <dp:source>block2</dp:source>
+                <dp:destination>fact2</dp:destination>
+                <dp:mapExpression expression="* = received:, * = created:" />
+            </dp:route>
+            <!-- error handling routes -->
+            <dp:route>
+                <dp:source>@nodes</dp:source>
+                <dp:destination>error_discard</dp:destination>
+                <dp:mapExpression expression="* = error:"/>
+                <dp:condition>
+                    <dt:and>
+                        <dt:not>
+                            <dt:predicate>
+                                <dp:eventType>routing:record-has-been-delivered</dp:eventType>
+                            </dt:predicate>
+                        </dt:not>
+                        <dt:not>
+                            <dt:predicate>
+                                <dp:eventType>meta:ok</dp:eventType>
+                            </dt:predicate>
+                        </dt:not>
+                    </dt:and>
+
+                </dp:condition>
+            </dp:route>
+        </network>
+   </process>
+
+   <process name="test20">
+        <terminals>
+            <!-- The input of this process will be file(s).  -->
+            <input name="logfile" monitorFrequency="0">
+                <datasource>
+                    <df:format>
+                        <df:streamFormat>
+                            <df:encoding>utf-8</df:encoding>
+                            <df:newline>&#xA;</df:newline>
+                            <df:separator>,</df:separator>
+                            <df:escape>\</df:escape>
+                            <df:fields>
+                                <df:column name="aa" />
+                                <df:column name="bb" />
+                            </df:fields>
+                            <df:defaultQuotes>
+                              <df:quotes>&quot;</df:quotes>
+                            </df:defaultQuotes>
+                            <df:columnFormatting>
+                                <df:column columnRef="aa">
+                                    <df:quotes>
+                                        <df:start>[</df:start>
+                                        <df:end>]</df:end>
+                                    </df:quotes>
+                                </df:column>
+                                <df:column columnRef="bb">
+                                    <df:quotes>
+                                        <df:quotes>&quot;</df:quotes>
+                                    </df:quotes>
+                                </df:column>
+                            </df:columnFormatting>
+                        </df:streamFormat>
+                    </df:format>
+                </datasource>
+                <conversionHint field="aa">
+                    <name>string2int</name>
+                    <parameters default="0" />
+                </conversionHint>
+            </input>
+            <!-- Use default formats for output files. -->
+            <output name="fact">
+                <conversionHint field="aa">
+                    <name>int2string</name>
+                </conversionHint>
+            </output>
+            <output name="error_discard" />
+       </terminals>
+        <network>
+            <dp:io>
+                <dp:inputRef>logfile</dp:inputRef>
+                <dp:outputRef>fact</dp:outputRef>
+                <dp:outputRef>error_discard</dp:outputRef>
+           </dp:io>
+            <dp:node name="block0" monitorFrequency="1">
+                <dp:receivedFields>
+                    <df:column name="aa" javaType="java.lang.Integer" />
+                    <df:column name="bb" javaType="java.lang.String" />
+                </dp:receivedFields>
+                <dp:createdFields>
+                    <df:column name="cc" javaType="java.lang.String" />
+                </dp:createdFields>
+                <dp:tasks>
+                    <dp:call> <!-- Gets user and session ID out of HTTP cookies. -->
+                        <dt:class>hu.sztaki.ilab.giraffe.core.util.TestClasses$SomeClass</dt:class>
+                        <dt:input field="bb" />
+                        <dt:output variable="apache_id" field="cc" />
+                    </dp:call>
+                </dp:tasks>
+            </dp:node>
+            <!-- main process routes: if all goes well, the rows travel through these routes. -->
+            <dp:route>
+                <dp:source>logfile</dp:source>
+                <dp:destination>block0</dp:destination>
+            </dp:route>
+            <dp:route>
+                <dp:source>block0</dp:source>
+                <dp:destination>fact</dp:destination>
+                <dp:mapExpression expression="* = received:, * = created:" />
+            </dp:route>
+            <!-- error handling routes -->
+            <dp:route>
+                <dp:source>@nodes</dp:source>
+                <dp:destination>error_discard</dp:destination>
+                <dp:mapExpression expression="* = error:"/>
+                <dp:condition>
+                    <dt:and>
+                        <dt:not>
+                            <dt:predicate>
+                                <dp:eventType>routing:record-has-been-delivered</dp:eventType>
+                            </dt:predicate>
+                        </dt:not>
+                        <dt:not>
+                            <dt:predicate>
+                                <dp:eventType>meta:ok</dp:eventType>
+                            </dt:predicate>
+                        </dt:not>
+                    </dt:and>
+
+                </dp:condition>
+            </dp:route>
+        </network>
+    </process>
+
 </definitions>

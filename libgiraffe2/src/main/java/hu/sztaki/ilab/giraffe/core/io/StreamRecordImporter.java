@@ -52,7 +52,7 @@ public class StreamRecordImporter extends RecordImporter {
         try {
         java.util.List<String> record = read();
         if (record == null) return null;
-        return read().toArray();
+        return record.toArray();
         } catch (java.io.IOException ex) {
             logger.error("IO exception occurred while reading input.", ex);
             return null;
