@@ -39,6 +39,6 @@
     <terminals>
         <defaultQueueSize>5000</defaultQueueSize>
         <!-- timeout is measured in seconds -->
-        <queueWaitTimeout>10</queueWaitTimeout>
+        <queueWaitTimeout>3</queueWaitTimeout>
     </terminals>
 </defaults>

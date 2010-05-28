@@ -71,4 +71,13 @@ public class StreamRecordExporter extends RecordExporter{
         }
         linesWritten++;
     }
+
+    public void close() {
+        try {
+            stream.close();
+        } catch (Exception ex) {
+            logger.error("Error closing stream.", ex);
+        }
+    }
+
 }
