@@ -1,0 +1,1 @@
+Giraffe is an ETL library which can be embedded into another project or used on its own to extract, transform, and load data to and from files and sql databases.
